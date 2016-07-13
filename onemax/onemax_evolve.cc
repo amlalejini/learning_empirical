@@ -7,62 +7,13 @@
 #include "../../Empirical/evo/World.h"
 #include "../../Empirical/evo/StatsManager.h"
 
+#include "Organisms/OneMaxOrganism.h"
+
 ///////////////////
 // Notes: How do I setup mutate on birth?
 // * To learn:
-//  - Using a stats manager
-//  - Using the signals
 ///////////////////
 
-class OneMaxOrg {
-private:
-public:
-  emp::BitVector genome;
-
-  OneMaxOrg(int genome_length = 1): genome(genome_length, false)  {
-    /* OneMaxOrg constructor.
-        Given a specified genome length, initialize one max organism.
-        * Genome: a bitstring. Initialized to all 0's
-        * Fitness: sum of 1's in genome
-        * Mutation: point mutations (bit flips) at each site with some some probability equal to the mutation rate.
-    */
-  }
-
-  void Print() {
-    /* Print information about this particular organism. */
-    // Genome information
-    std::cout << "Genome: ";
-    genome.Print(std::cout);
-    std::cout << std::endl;
-  }
-
-  bool operator==(const OneMaxOrg &other) const {
-    /* Do these organisms have the same genotype? */
-    return this->genome == other.genome;
-  }
-
-  bool operator<(const OneMaxOrg &other) const {
-    /* Fitness comparison */
-    return this->genome < other.genome;
-  }
-
-  bool operator>(const OneMaxOrg &other) const {
-    return this->genome > other.genome;
-  }
-
-  bool operator!=(const OneMaxOrg &other) const {
-    return this->genome != other.genome;
-  }
-
-  bool operator>=(const OneMaxOrg &other) const {
-    return !this->operator<(other);
-  }
-
-  bool operator<=(const OneMaxOrg &other) const {
-    return !this->operator>(other);
-  }
-
-};
 
 int main() {
   // Initialize random num generator
@@ -73,8 +24,8 @@ int main() {
   const int UPDATES = 150;
 
   // Build the world
-  emp::evo::World<OneMaxOrg, emp::evo::PopEA, emp::evo::DefaultStats> world(random, "OneMaxWorld");
-  world.SetDefaultMutateFun([POINT_MUTATION_RATE](OneMaxOrg *org, emp::Random &random) -> bool {
+  emp::evo::World<OneMaxOrganism, emp::evo::PopEA, emp::evo::DefaultStats> world(random, "OneMaxWorld");
+  world.SetDefaultMutateFun([POINT_MUTATION_RATE](OneMaxOrganism *org, emp::Random &random) -> bool {
     /* With some probability (point mutation rate), flip bits. */
     bool mutated = false;
     for (int i = 0; i < org->genome.GetSize(); i++) {
@@ -85,7 +36,7 @@ int main() {
     }
     return mutated;
   });
-  world.SetDefaultFitnessFun([](OneMaxOrg *org) -> double {
+  world.SetDefaultFitnessFun([](OneMaxOrganism *org) -> double {
     return (double) org->genome.CountOnes();
   });
 
@@ -94,7 +45,7 @@ int main() {
   });
   // Initialize the population
   for (int p = 0; p < POPULATION_SIZE; p++) {
-    OneMaxOrg baby_org(GENOME_LENGTH);
+    OneMaxOrganism baby_org(GENOME_LENGTH);
     world.Insert(baby_org);
   }
   // Test all operators

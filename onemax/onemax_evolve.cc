@@ -1,11 +1,12 @@
 
 #include <iostream>
+#include <functional>
 
 #include "../../Empirical/tools/BitVector.h"
 #include "../../Empirical/tools/Random.h"
 
 #include "../../Empirical/evo/World.h"
-#include "../../Empirical/evo/StatsManager.h"
+//#include "../../Empirical/evo/StatsManager.h"
 
 #include "Organisms/OneMaxOrganism.h"
 
@@ -24,8 +25,9 @@ int main() {
   const int UPDATES = 150;
 
   // Build the world
-  emp::evo::World<OneMaxOrganism, emp::evo::PopEA, emp::evo::DefaultStats> world(random, "OneMaxWorld");
-  world.SetDefaultMutateFun([POINT_MUTATION_RATE](OneMaxOrganism *org, emp::Random &random) -> bool {
+  emp::evo::World<OneMaxOrganism, emp::evo::PopEA> world(random, "OneMaxWorld");
+
+  std::function<bool(OneMaxOrganism *, emp::Random &)> mut_fun = [POINT_MUTATION_RATE](OneMaxOrganism *org, emp::Random &random) -> bool {
     /* With some probability (point mutation rate), flip bits. */
     bool mutated = false;
     for (int i = 0; i < org->genome.GetSize(); i++) {
@@ -35,10 +37,13 @@ int main() {
       }
     }
     return mutated;
-  });
-  world.SetDefaultFitnessFun([](OneMaxOrganism *org) -> double {
+  };
+  world.SetDefaultMutateFun(mut_fun);
+
+  std::function<double(OneMaxOrganism *)> fit_fun = [](OneMaxOrganism *org) -> double {
     return (double) org->genome.CountOnes();
-  });
+  };
+  world.SetDefaultFitnessFun(fit_fun);
 
   emp::LinkSignal("OneMaxWorld::on-update", []() {
     std::cout << "OneMaxWorld : on update signal" << std::endl;

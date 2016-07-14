@@ -5,6 +5,7 @@
 */
 
 #include <iostream>
+#include <sstream>
 #include <functional>
 
 #include "../../Empirical/tools/BitVector.h"
@@ -27,6 +28,8 @@
 namespace web = emp::web;
 
 using std::cout; using std::endl;
+using std::ostringstream;
+using std::string;
 
 // NOTE: Once compiled into JS, things outside of main will go out of scope.
 //  - Thus, we need to make things we want to stick around globals.
@@ -37,23 +40,29 @@ const int GENOME_LENGTH = 50;
 const float POINT_MUTATION_RATE = 0.01;
 const int UPDATES = 150;
 const int RANDOM_SEED = 101;
+const int TOURNY_SIZE = 4;
 
 class OneMaxInterface {
   private:
     emp::Random random;
     emp::evo::World<OneMaxOrganism, emp::evo::PopEA> world;
-    web::Document doc;
+    // web::Document doc;
+    web::Document dashboard;
+    web::Document display;
     web::Animate anim;
 
     int update;
+    string best_genotype;
 
   public:
     OneMaxInterface()
       : random(RANDOM_SEED),
         world(random, "OneMaxWorld"),
-        doc("emp_base"),
+        dashboard("dashboard-panel-body"),
+        display("display"),
         anim([this]() { OneMaxInterface::Evolve(anim); }), // Create an animation object. Setup a callback function.
-        update(0)
+        update(0),
+        best_genotype("")
     {
       // Print out a welcoming message to let everyone know we're here!
       cout << "Constructing OneMaxInterface!" << endl;
@@ -90,42 +99,19 @@ class OneMaxInterface {
       //////////////////////////////////
       //       INTERFACE SETUP        //
       //////////////////////////////////
-      // Add a beautiful JUMBOTRON!
-      doc <<
-        "<div id=\"banner\" class = \"jumbotron\">"
-          "<h1>Visualization: One Max -- Learning Empircal</h1>"
-        "</div>";
-
-      // Build the HTML backbone/layout of the page
-      doc <<
-        "<div class=row>"
-        " <div class=col-md-12>"
-        "   <div class=\"panel panel-default\">"
-        "     <div class=\"panel-heading\">"
-        "       <h2>Dashboard</h2>"
-        "     </div>"
-        "     <div class=\"panel-body\" id=\"dashboard-panel-body\">"
-        "     </div>"
-        "   </div>"
-        " </div>"
-        "</div>";
+      // Setup dashboard
       // -- Make buttons! --
-      // start button
-      doc << web::Button([this]() { DoToggleRun(); }, "<span class=\"glyphicon glyphicon-play\" aria-hidden=\"true\"></span>", "start_but");
-      auto start_button = doc.Button("start_but");
-      start_button.Title("\" class=\"btn btn-default"); // HTML injection! -- pretty naughty
+      // - start button -
+      dashboard << web::Button([this]() { DoToggleRun(); }, "<span class=\"glyphicon glyphicon-play\" aria-hidden=\"true\"></span>", "start_but");
+      auto start_button = dashboard.Button("start_but");
+      start_button.SetAttr("class", "btn btn-success"); // HTML injection! -- pretty naughty
       // reset button
-      doc << web::Button([this]() { DoReset(); }, "<span class=\"glyphicon glyphicon-refresh\" aria-hidden=\"true\"></span>", "reset_but");
-      auto reset_button = doc.Button("reset_but");
-      reset_button.Title("\" class=\"btn btn-default");
-      // Use javascript to organize elements on the page
-      EM_ASM({
-        $(document).ready(function() {
-          $('#dashboard-panel-body').append($('#start_but'));
-          $('#dashboard-panel-body').append($('#reset_but'));
-        });
-      });
-      //anim.ToggleActive();
+      dashboard << web::Button([this]() { DoReset(); }, "<span class=\"glyphicon glyphicon-refresh\" aria-hidden=\"true\"></span>", "reset_but");
+      auto reset_button = dashboard.Button("reset_but");
+      reset_button.SetAttr("class", "btn btn-primary");
+      // Display
+      display << "Current update: " << web::Live(update) << "<br>";
+      display << "Current best genotype: " << web::Live(best_genotype) << "<br>";
 
     }
 
@@ -152,25 +138,45 @@ class OneMaxInterface {
       // Toggle animation object active
       cout << "Do Toggle Run!" << endl;
       anim.ToggleActive();
-      auto start_but = doc.Button("start_but");
+      auto start_but = dashboard.Button("start_but");
       // Update button
       if (anim.GetActive()) {
         // If active, set button to show 'pause' option
         start_but.Label("<span class=\"glyphicon glyphicon-pause\" aria-hidden=\"true\"></span>");
+        start_but.SetAttr("class", "btn btn-danger");
       } else {
         // If inactive, set button to show 'play' option
         start_but.Label("<span class=\"glyphicon glyphicon-play\" aria-hidden=\"true\"></span>");
+        start_but.SetAttr("class", "btn btn-success");
       }
     }
 
     void DoReset() {
       cout << "RESET!" << endl;
       ResetEvolution();
+      display.Redraw();
     }
 
     void Evolve(const web::Animate &anim) {
-      cout << "Evolution is happening? " << update << endl;
+      // time marches on
       update++;
+      // run selection on population
+      world.TournamentSelect(TOURNY_SIZE, world.GetSize());
+      // move to next generation
+      world.Update();
+      // mutate next generation
+      world.MutatePop();
+      // Max fitness?
+      int most_fit = 0;
+      for (int i = 0; i < world.GetSize(); i++) {
+        if (world[i] >= world[most_fit]) most_fit = i;
+      }
+      // Update best genotype
+      ostringstream oss;
+      world[most_fit].genome.Print(oss);
+      best_genotype = oss.str();
+      // Handle redrawing
+      display.Redraw();
     }
 
 };

@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <sstream>
 #include <functional>
 
 #include "../../Empirical/tools/BitVector.h"
@@ -73,7 +74,12 @@ int main() {
   //   std::cout << "ORG #" << i << ": " << std::endl;
   //   world[i].Print();
   // }
-
+  // Test string stream stuff
+  // std::ostringstream oss;
+  // world[0].genome.Print(oss);
+  // std::cout << "====== " << oss.str() << std::endl;
+  // exit(0);
+  //std::cout << ss;
   // Evolution!
   for (int ud = 1; ud <= UPDATES; ud++) {
     int tourny_size = 4;

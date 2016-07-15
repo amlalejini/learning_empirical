@@ -18,6 +18,7 @@
 #include "../../Empirical/web/Animate.h"
 
 #include "Organisms/OneMaxOrganism.h"
+#include "Visualizations/OneMaxVisualization.h"
 
 ////////////////////////
 // Notes to self:
@@ -35,7 +36,7 @@ using std::string;
 //  - Thus, we need to make things we want to stick around globals.
 
 // For now, these params will be globals.
-const int POPULATION_SIZE = 1000;
+const int POPULATION_SIZE = 25;
 const int GENOME_LENGTH = 50;
 const float POINT_MUTATION_RATE = 0.01;
 const int UPDATES = 150;
@@ -46,10 +47,11 @@ class OneMaxInterface {
   private:
     emp::Random random;
     emp::evo::World<OneMaxOrganism, emp::evo::PopEA> world;
-    // web::Document doc;
     web::Document dashboard;
     web::Document display;
+    web::Document onemax_vis;
     web::Animate anim;
+    OneMaxVisualization vis;
 
     int update;
     string best_genotype;
@@ -60,7 +62,9 @@ class OneMaxInterface {
         world(random, "OneMaxWorld"),
         dashboard("dashboard-panel-body"),
         display("display"),
+        onemax_vis("onemax_visualization"),
         anim([this]() { OneMaxInterface::Evolve(anim); }), // Create an animation object. Setup a callback function.
+        vis(POPULATION_SIZE, GENOME_LENGTH),
         update(0),
         best_genotype("")
     {
@@ -91,7 +95,8 @@ class OneMaxInterface {
       world.SetDefaultMutateFun(mutation_fun);
 
       // Initialize evolution
-      Initialize();
+
+
       //////////////////////////////////
       //    LINK EVO AND INTERFACE    //
       //////////////////////////////////
@@ -112,6 +117,21 @@ class OneMaxInterface {
       // Display
       display << "Current update: " << web::Live(update) << "<br>";
       display << "Current best genotype: " << web::Live(best_genotype) << "<br>";
+      // D3 visualization
+      onemax_vis << vis;
+
+      Initialize();
+
+      // Hack in a visualization:
+      // EM_ASM({
+      //   // Create a main function
+      //   var main = function() {
+      //     console.log("Entering main!" );
+      //
+      //   };
+      //   // On ready, call js main
+      //   $(document).ready(main());
+      // }, );
 
     }
 
@@ -136,7 +156,6 @@ class OneMaxInterface {
 
     void DoToggleRun() {
       // Toggle animation object active
-      cout << "Do Toggle Run!" << endl;
       anim.ToggleActive();
       auto start_but = dashboard.Button("start_but");
       // Update button
@@ -152,7 +171,6 @@ class OneMaxInterface {
     }
 
     void DoReset() {
-      cout << "RESET!" << endl;
       ResetEvolution();
       display.Redraw();
     }
@@ -172,6 +190,7 @@ class OneMaxInterface {
         if (world[i] >= world[most_fit]) most_fit = i;
       }
       // Update best genotype
+      vis.AnimateStep(world);
       ostringstream oss;
       world[most_fit].genome.Print(oss);
       best_genotype = oss.str();

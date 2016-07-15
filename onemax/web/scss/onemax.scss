@@ -1,0 +1,15 @@
+
+
+.axis {
+    fill: none;
+    stroke: black;
+    shape-rendering: crispEdges;
+}
+
+#onemax_x_axis {
+  @extend .axis;
+}
+
+#onemax_y_axis {
+  @extend .axis;
+}

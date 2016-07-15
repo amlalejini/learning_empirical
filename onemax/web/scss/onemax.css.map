@@ -1,0 +1,7 @@
+{
+"version": 3,
+"mappings": "AAEA,qCAAM;EACF,IAAI,EAAE,IAAI;EACV,MAAM,EAAE,KAAK;EACb,eAAe,EAAE,UAAU",
+"sources": ["onemax.scss"],
+"names": [],
+"file": "onemax.css"
+}

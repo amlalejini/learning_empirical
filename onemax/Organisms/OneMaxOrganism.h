@@ -1,3 +1,8 @@
+/*
+  Organisms/OneMaxOrganism.h
+    Defines the OneMaxOrganism class. Super simple organism used by onemax_evolve/onemax_web.
+    I mostly made this just to learn how to use custom organisms in empirical.
+*/
 
 #ifndef ONEMAXORGANISM_H
 #define ONEMAXORGANISM_H

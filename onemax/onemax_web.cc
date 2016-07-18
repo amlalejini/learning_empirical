@@ -94,9 +94,6 @@ class OneMaxInterface {
       };
       world.SetDefaultMutateFun(mutation_fun);
 
-      // Initialize evolution
-
-
       //////////////////////////////////
       //    LINK EVO AND INTERFACE    //
       //////////////////////////////////
@@ -151,6 +148,9 @@ class OneMaxInterface {
         OneMaxOrganism baby_org(GENOME_LENGTH);
         world.Insert(baby_org);
       }
+      ostringstream oss;
+      world[0].genome.Print(oss);
+      best_genotype = oss.str();
       cout << "Population successfully initialized!" << endl;
     }
 
@@ -173,6 +173,7 @@ class OneMaxInterface {
     void DoReset() {
       ResetEvolution();
       display.Redraw();
+      vis.AnimateStep(world);
     }
 
     void Evolve(const web::Animate &anim) {

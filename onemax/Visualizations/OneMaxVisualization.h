@@ -27,11 +27,11 @@ struct Margins {
 class OneMaxVisualization : public emp::web::D3Visualization {
   private:
     Margins margins;
+    float vertical_genome_spacer;
     std::array<double, 2> y_domain;
     std::array<double, 2> x_domain;
     std::array<double, 2> x_range;
     std::array<double, 2> y_range;
-
 
   public:
     D3::LinearScale x_scale;
@@ -40,7 +40,8 @@ class OneMaxVisualization : public emp::web::D3Visualization {
     D3::Axis<D3::LinearScale> y_axis;
 
     OneMaxVisualization(int population_size, int genome_size)
-      : y_domain{0, (double) population_size},
+      : vertical_genome_spacer(0.2),
+        y_domain{0, (double) population_size + (population_size * vertical_genome_spacer)},
         x_domain{0, (double) genome_size},
         y_range{0, y_domain[1] * 10},
         x_range{0, x_domain[1] * 10},
@@ -69,11 +70,15 @@ class OneMaxVisualization : public emp::web::D3Visualization {
         // org_canvas.EnterAppend("rect");
         // org_canvas.ExitRemove();
         for (int s = 0; s < world[p].genome.GetSize(); s++) {
-          D3::Selection site = org_canvas.Append("rect");
-          site.SetAttr("x", x_scale.ApplyScale(s));
-          site.SetAttr("y", y_scale.ApplyScale(p));
-          site.SetAttr("width", x_scale.ApplyScale(1));
-          site.SetAttr("height", y_scale.ApplyScale(1));
+          // D3::Selection site = org_canvas.Append("rect");
+          // site.SetAttr("x", x_scale.ApplyScale(s));
+          // site.SetAttr("y", y_scale.ApplyScale(p));
+          // site.SetAttr("width", x_scale.ApplyScale(1));
+          // site.SetAttr("height", y_scale.ApplyScale(1));
+          D3::Selection site = org_canvas.Append("circle");
+          site.SetAttr("cx", x_scale.ApplyScale(s + 0.5));
+          site.SetAttr("cy", y_scale.ApplyScale(p + 0.5));
+          site.SetAttr("r", x_scale.ApplyScale(0.5));
           if (world[p].genome[s]) {
             site.SetAttr("fill", "black");
           } else {

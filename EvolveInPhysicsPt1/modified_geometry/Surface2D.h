@@ -28,6 +28,7 @@
 
 #include "tools/functions.h"
 #include "Body2D.h"
+#include <iostream>
 
 #include <functional>
 
@@ -49,6 +50,8 @@ namespace emp {
     double GetWidth() const { return max_pos.GetX(); }
     double GetHeight() const { return max_pos.GetY(); }
     const Point<double> & GetMaxPosition() const { return max_pos; }
+
+    BODY_TYPE & operator[](int i) { return body_set[i]; }
 
     std::vector<BODY_TYPE *> & GetBodySet() { return body_set; }
     const std::vector<BODY_TYPE *> & GetConstBodySet() const { return body_set; }

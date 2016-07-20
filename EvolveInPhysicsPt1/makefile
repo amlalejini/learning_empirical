@@ -9,6 +9,7 @@ CXX_native := g++
 
 # Other flags
 OFLAGS_native := -g -pedantic
+OFLAGS_web := -DNDEBUG -s TOTAL_MEMORY=67108864
 
 # Bringing flag options together
 CFLAGS_native := $(CFLAGS_all)
@@ -22,7 +23,7 @@ web: $(JS_TARGETS)
 native: evo_in_physics_pt1.cc
 	$(CXX_native) $(CFLAGS_native) evo_in_physics_pt1.cc -o evo_in_physics_pt1
 
-onemax.js: evo_in_physics_pt1_web.cc
+evo_in_physics_pt1.js: evo_in_physics_pt1_web.cc
 	mkdir -p web
 	$(CXX_web) $(CFLAGS_web) evo_in_physics_pt1_web.cc -o web/evo_in_physics_pt1.js
 

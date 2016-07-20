@@ -28,6 +28,8 @@ class ABPhysicsOrganism : public emp::CircleBody2D {
       std::cout << "Organism constructor!" << std::endl;
     }
 
+    ~ABPhysicsOrganism() { ; }
+
     bool operator==(const ABPhysicsOrganism &other) const {
       /* Do these organisms have the same genotype? */
       return this->genome == other.genome;

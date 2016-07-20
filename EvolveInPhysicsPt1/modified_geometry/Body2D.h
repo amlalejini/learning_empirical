@@ -30,6 +30,8 @@
 #include "Angle2D.h"
 #include "Circle2D.h"
 
+#include <iostream>
+
 namespace emp {
 
   class Body2D_Base {
@@ -126,14 +128,13 @@ namespace emp {
     CircleBody2D(const Circle<double> & _p)
       : perimeter(_p), target_radius(_p.GetRadius())
     {
-      EMP_TRACK_CONSTRUCT(CircleBody2D);
+      //EMP_TRACK_CONSTRUCT(CircleBody2D);
     }
     ~CircleBody2D() {
       // Remove any remaining links from this body.
       while (from_links.size()) RemoveLink(from_links[0]);
       while (to_links.size()) RemoveLink(to_links[0]);
-
-      EMP_TRACK_DESTRUCT(CircleBody2D);
+      //EMP_TRACK_DESTRUCT(CircleBody2D);
     }
 
     const Circle<double> & GetPerimeter() const { return perimeter; }

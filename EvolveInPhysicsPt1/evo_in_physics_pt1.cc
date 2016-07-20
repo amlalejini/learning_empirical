@@ -29,6 +29,8 @@
 //    - Implement physics body nutrients
 //    - Implement nutrient x organism interactions in population manager
 ///////////////////////////////
+// ISSUES
+//  * EMP_TRACK_MEMORY on bodies kills program
 
 int main() {
   // Initialize the random number generator
@@ -37,15 +39,24 @@ int main() {
   const int GENOME_LENGTH = 50;
   const float POINT_MUTATION_RATE = 0.01;
   const int UPDATES = 100;
+  const double WORLD_WIDTH = 100.0;
+  const double WORLD_HEIGHT = 100.0;
+  const double MAX_ORG_DIAM = 10.0;
+  const bool ORG_DETACH_ON_BIRTH = true;
 
   // Build the world
-  emp::evo::World<ABPhysicsOrganism, PopulationManager_ABPhysics<ABPhysicsOrganism>> world(random, "AB_Physics_World");
-
+  emp::evo::World<ABPhysicsOrganism, emp::evo::PopulationManager_ABPhysics<ABPhysicsOrganism>> world(random, "AB_Physics_World");
+  // Configure the population manager
+  world.ConfigPop(WORLD_WIDTH, WORLD_HEIGHT, MAX_ORG_DIAM, ORG_DETACH_ON_BIRTH);
   // Build a population
   for (int p = 0; p < 10; p++) {
     emp::Point<double> org_loc(1, 1);
     int org_radius = 1;
-    ABPhysicsOrganism baby_org(emp::Circle<double>(org_loc, org_radius), GENOME_LENGTH);
+    world.Insert(ABPhysicsOrganism(emp::Circle<double>(org_loc, org_radius), GENOME_LENGTH));
+  }
+  for (int u = 1; u <= UPDATES; u++) {
+    std::cout << "Current update: " << u << std::endl;
+    world.Update();
   }
   std::cout << "DONE" << std::endl;
   return 0;

@@ -106,7 +106,7 @@ class OneMaxInterface {
       // - start button -
       dashboard << web::Button([this]() { DoToggleRun(); }, "<span class=\"glyphicon glyphicon-play\" aria-hidden=\"true\"></span>", "start_but");
       auto start_button = dashboard.Button("start_but");
-      start_button.SetAttr("class", "btn btn-success"); // HTML injection! -- pretty naughty
+      start_button.SetAttr("class", "btn btn-success"); 
       // reset button
       dashboard << web::Button([this]() { DoReset(); }, "<span class=\"glyphicon glyphicon-refresh\" aria-hidden=\"true\"></span>", "reset_but");
       auto reset_button = dashboard.Button("reset_but");

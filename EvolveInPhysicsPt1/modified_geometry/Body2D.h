@@ -217,7 +217,7 @@ namespace emp {
       link.cur_dist += change;
     }
 
-    CircleBody2D * BuildOffspring(emp::Point<double> offset) {
+    CircleBody2D * BuildLinkedCircleBody2D(emp::Point<double> offset) {
       // Offspring cannot be right on top of parent.
       emp_assert(offset.GetX() != 0 || offset.GetY() != 0);
 

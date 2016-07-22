@@ -24,6 +24,7 @@ const int RANDOM_SEED = 101;
 const int WORLD_WIDTH = 500;
 const int WORLD_HEIGHT = 500;
 const int MAX_ORG_DIAM = 10;
+const int MIN_POP_SIZE = 4;
 const int ORG_DETACH_ON_BIRTH = true;
 
 bool OtherKey(const emp::html5::KeyboardEvent & evt)
@@ -71,6 +72,10 @@ class EvoInPhysicsInterface {
       dashboard << web::Button([this]() { DoReset(); }, "<span class=\"glyphicon glyphicon-refresh\" aria-hidden=\"true\"></span>", "reset_but");
       auto reset_button = dashboard.Button("reset_but");
       reset_button.SetAttr("class", "btn btn-primary");
+      // - step button -
+      dashboard << web::Button([this]() { DoStep(); }, "<span class=\"glyphicon glyphicon-step-forward\" aria-hidden=\"true\"></span>", "step_but");
+      auto step_button = dashboard.Button("step_but");
+      step_button.SetAttr("class", "btn btn-default");
 
       // Setup stats view
       stats_view.SetAttr("class", "well");
@@ -84,16 +89,14 @@ class EvoInPhysicsInterface {
       // Initialize the run
       Initialize();
 
-
-
     }
 
     void Initialize() {
       /* Do everything necessary to initialize our run. */
       // Configure the population
-      world.ConfigPop(WORLD_WIDTH, WORLD_HEIGHT, MAX_ORG_DIAM, ORG_DETACH_ON_BIRTH);
+      world.ConfigPop(WORLD_WIDTH, WORLD_HEIGHT, MAX_ORG_DIAM, ORG_DETACH_ON_BIRTH, MIN_POP_SIZE);
       // Reset evolution back to the beginning
-      ResetEvolution();
+      DoReset();
     }
 
     void ResetEvolution() {
@@ -105,14 +108,13 @@ class EvoInPhysicsInterface {
       // Initialize the population.
       // - Get mid-point of world.
       const emp::Point<double> mid_point(WORLD_WIDTH / 2.0, WORLD_HEIGHT / 2.0);
-      int org_radius = 1;
+      int org_radius = 10;
       // - Insert ancestor into population.
       world.Insert(ABPhysicsOrganism(emp::Circle<double>(mid_point, org_radius)));
     }
 
     bool DoReset() {
       /* Called on reset button press. */
-      std::cout << "DoReset()!" << std::endl;
       // Reset evolution
       ResetEvolution();
       // Redraw the world
@@ -124,27 +126,34 @@ class EvoInPhysicsInterface {
 
     bool DoToggleRun() {
       /* Called on start/stop button press. */
-      std::cout << "Do toggle run!" << std::endl;
       // Toggle animation object (active <--> not active)
       anim.ToggleActive();
       // Grab the start/stop button.
       auto start_but = dashboard.Button("start_but");
+      auto step_but = dashboard.Button("step_but");
       // Update the button.
       if (anim.GetActive()) {
         // If active, set button to show 'stop' option.
         start_but.Label("<span class=\"glyphicon glyphicon-pause\" aria-hidden=\"true\"></span>");
         start_but.SetAttr("class", "btn btn-danger");
+        step_but.Disabled(true);
       } else {
         // If inactive, set button to show 'play' option.
         start_but.Label("<span class=\"glyphicon glyphicon-play\" aria-hidden=\"true\"></span>");
         start_but.SetAttr("class", "btn btn-success");
+        step_but.Disabled(false);
       }
       return true;
     }
 
+    void DoStep() {
+      /* Called from step button. */
+      emp_assert(anim.GetActive() == false);
+      anim.Step();
+    }
+
     void Animate(const web::Animate &anim) {
       /* One step of animated evolution. */
-      std::cout << "Animate!" << std::endl;
       // Time marches on.
       current_update++;
       // Update world
@@ -153,6 +162,12 @@ class EvoInPhysicsInterface {
       web::Draw(world_view.Canvas("evo-in-physics-pt1-world"), world.popM.GetPhysics().GetSurface(), emp::GetHueMap(360));
       // Redraw stats
       stats_view.Redraw();
+      // // Print out population...
+      // std::cout << "======Population" << std::endl;
+      // for (int p = 0; p < world.GetSize(); p++) {
+      //   std::cout << "Org " << p << ": (" << world[p].GetCenter().GetX() << ", " << world[p].GetCenter().GetY() << ")" << std::endl;
+      // }
+      // std::cout << "================" << std::endl;
     }
 
     bool OnKeydown(const emp::html5::KeyboardEvent &evt) {

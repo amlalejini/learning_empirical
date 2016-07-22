@@ -8,11 +8,14 @@
 #define POPULATION_MANAGER_ABPHYSICS_H
 
 #include <iostream>
+#include <functional>
 
 #include "../modified_geometry/ABPhysics2D.h"
 #include "../modified_geometry/Surface2D.h"
+#include "../modified_geometry/Angle2D.h"
 
 #include "evo/PopulationManager.h"
+#include "tools/vector.h"
 
 /////////////////////////////
 // Learning notes
@@ -29,12 +32,12 @@
 //    - Also related, I do not like the relationship between physics organism and CircleBody2D
 /////////////////////////////
 // TODO:
-// -- Merge Physics up into population manager
-//
+// -- Assert that organism is a physics body
 
 namespace emp {
 namespace evo {
 
+// Template must both be a physics body organism
 template <typename ORG>
 class PopulationManager_ABPhysics {
   protected:
@@ -42,9 +45,9 @@ class PopulationManager_ABPhysics {
 
     ABPhysics2D<ORG> physics;
     Random *random_ptr;
-
     // TODO: pull these in from outside pop manager
     const double pop_pressure = 1.0;
+    int minimum_population_size;
     double repro_prob;
     double drift;
     double max_org_radius;
@@ -54,11 +57,10 @@ class PopulationManager_ABPhysics {
       : physics(),
         repro_prob(0.003),
         drift(0.15),
-        max_org_radius(4.0)
+        max_org_radius(4.0),
+        minimum_population_size(1)
     {
-      std::cout << "About to assign pop to be body set." << std::endl;
-      //pop = physics.GetBodySet();
-      std::cout << "Population Manager (AB Physics) Contruction!" << std::endl;
+      ;
     }
 
     ~PopulationManager_ABPhysics() { ; }
@@ -83,7 +85,7 @@ class PopulationManager_ABPhysics {
     void SetRandom(Random *r) { random_ptr = r; }
 
 
-    void ConfigPop(double width, double height, double max_org_diameter = 20, bool detach = true) {
+    void ConfigPop(double width, double height, double max_org_diameter = 20, bool detach = true, int min_pop_size = 1) {
       /*
         Configure the population manager (and the underlying physics) given the following parameters:
           * width: width of physics world (in world units)
@@ -91,7 +93,8 @@ class PopulationManager_ABPhysics {
           * max_org_diameter: max organism diameter (in world units)
           * detach: should organisms be attached or detached to parent at birth?
       */
-      std::cout << "Configuring population manager..." << std::endl;
+      // Configure population-specific variables
+      minimum_population_size = min_pop_size;
       // Configure the physics
       physics.ConfigPhysics(width, height, max_org_diameter, detach);
     }
@@ -106,7 +109,6 @@ class PopulationManager_ABPhysics {
 
     void Update() {
       /* Calling this executes 1 tick of the world. */
-      std::cout << "Population Manager: WORLD UPDATE" << std::endl;
       // Take a single timestep on the world physics
       physics.Update();
 
@@ -116,9 +118,9 @@ class PopulationManager_ABPhysics {
 
       // Loop through all bodies to see which ones should replicate.
       for (auto *body : pop) {
+        // if not an organism, continue
         // Add a small amount of Brownian motion
         body->IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(drift));
-
         // Organisms cannot reproduce if:
         //  * They are already reproducing
         //  * They are under too much pressure
@@ -127,8 +129,16 @@ class PopulationManager_ABPhysics {
             || (body->GetPressure() > pop_pressure)) continue;
 
         // Reproduction would happen here
-
-        // Adding new bodies to world would happen here
+        // TODO: right now it's based on random chance of repro, need to make it fitness-based (when I actually have fitness values)
+        if (random_ptr->P(repro_prob) || ( (int) pop.size() < minimum_population_size) ) {
+          emp::Angle repro_angle(random_ptr->GetDouble(2.0 * emp::PI)); // What angle should we put the offspring at?
+          auto *baby_org = body->BuildOffspring(repro_angle.GetPoint(0.1));
+          new_organisms.push_back(baby_org);  // Mark this baby org to be added to the world.
+        }
+      }
+      // Adding new bodies to world would happen here
+      for (auto new_organism : new_organisms) {
+        AddOrg(new_organism);
       }
     }
 

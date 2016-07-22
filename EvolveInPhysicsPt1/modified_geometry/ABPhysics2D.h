@@ -4,7 +4,7 @@
 //
 //
 //  Physics2D - handles movement and collissions in a simple 2D world.
-
+//  This describes environment physics.
 
 #ifndef EMP_ABPHYSICS_2D_H
 #define EMP_ABPHYSICS_2D_H
@@ -20,8 +20,6 @@ using namespace std::placeholders;
 
 namespace emp {
 
-  // TODO:
-  //  * Will need to configure using a ConfigPhysics()
   template <typename BODY_TYPE> class ABPhysics2D {
     private:
       bool configured_physics;
@@ -38,7 +36,7 @@ namespace emp {
         : configured_physics(false),
           detach_on_birth(true)
       {
-        std::cout << "Constructing physics..." << std::endl;
+        ;
       }
 
       ABPhysics2D(double width, double height, double max_org_diameter = 20, bool detach = true) {
@@ -150,7 +148,6 @@ namespace emp {
 
       void Update() {
         /* Handle physics update. */
-        std::cout << "Physics: UPDATE" << std::endl;
         auto &body_set = surface->GetBodySet();
 
         // Update bodies
@@ -182,7 +179,6 @@ namespace emp {
 
         // Now that some cells are removed, resize the number of bodies.
         body_set.resize(cur_size);
-
       }
 
       // Access to bodies

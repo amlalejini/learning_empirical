@@ -36,15 +36,13 @@ bool OtherKey(const emp::html5::KeyboardEvent & evt)
 
 class EvoInPhysicsInterface {
   private:
-    emp::evo::World<ABPhysicsOrganism, emp::evo::PopulationManager_ABPhysics<ABPhysicsOrganism>> world;
     emp::Random random;
+    emp::evo::World<ABPhysicsOrganism, emp::evo::PopulationManager_ABPhysics<ABPhysicsOrganism>> world;
     web::Document dashboard;
     web::Document world_view;
     web::Document stats_view;
     web::Animate anim;
     web::KeypressManager keypress_manager;
-
-    enum class MapMode { BLANK, MAKE_BLANK, BASIC } map_mode;
 
     int current_update;
 
@@ -56,7 +54,6 @@ class EvoInPhysicsInterface {
         world_view("world-view"),
         stats_view("stats-view"),
         anim([this]() { EvoInPhysicsInterface::Animate(anim); }),
-        map_mode(MapMode::BASIC),
         current_update(-1)
     {
       std::cout << "Interface constructor." << std::endl;

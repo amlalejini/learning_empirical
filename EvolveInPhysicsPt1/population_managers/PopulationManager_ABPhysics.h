@@ -13,6 +13,9 @@
 #include "../modified_geometry/ABPhysics2D.h"
 #include "../modified_geometry/Surface2D.h"
 #include "../modified_geometry/Angle2D.h"
+#include "../modified_geometry/Body2D.h"
+
+#include "../nutrients/ABPhysicsNutrient.h"
 
 #include "evo/PopulationManager.h"
 #include "tools/vector.h"
@@ -26,13 +29,10 @@
 //    - Collision testing
 //    - Update
 //    - needs to maintain a Surface of bodies (organisms/[nutrients eventually])
-////////
-// DEV NOTES
-//  * I do not like the current relationship between physics2d and this population manager.
-//    - Also related, I do not like the relationship between physics organism and CircleBody2D
 /////////////////////////////
 // TODO:
 // -- Assert that organism is a physics body
+// -- Bad: Many things in physics bodies should be moved to organisms (Charles was formally using them as organisms, not just physics bodies)
 
 namespace emp {
 namespace evo {
@@ -43,7 +43,10 @@ class PopulationManager_ABPhysics {
   protected:
     using ptr_t = ORG*;
 
-    ABPhysics2D<ORG> physics;
+    ABPhysics2D<emp::CircleBody2D, ORG, ABPhysicsNutrient> physics;
+    // emp::vector<ORG *> pop;
+    // emp::vector<ABPhysicsNutrient *> nutrients;
+
     Random *random_ptr;
     // TODO: pull these in from outside pop manager
     const double pop_pressure = 1.0;
@@ -55,10 +58,10 @@ class PopulationManager_ABPhysics {
   public:
     PopulationManager_ABPhysics()
       : physics(),
+        minimum_population_size(1),
         repro_prob(0.003),
         drift(0.15),
-        max_org_radius(4.0),
-        minimum_population_size(1)
+        max_org_radius(4.0)
     {
       ;
     }
@@ -99,18 +102,23 @@ class PopulationManager_ABPhysics {
       physics.ConfigPhysics(width, height, max_org_diameter, detach);
     }
 
-    ABPhysics2D<ORG> & GetPhysics() { return physics; }
+    ABPhysics2D<emp::CircleBody2D, ORG, ABPhysicsNutrient> & GetPhysics() { return physics; }
 
     int AddOrg(ORG *new_org) {
+      // Returns position in physics?
       int pos = this->GetSize();
       physics.AddBody(new_org);
       return pos;
     }
 
+    int AddNutrient(ABPhysicsNutrient *new_nutrient) {
+      return 0;
+    }
+
     void Update() {
       /* Calling this executes 1 tick of the world. */
       // Take a single timestep on the world physics
-      physics.Update();
+      physics.Update(); // update physics (which may remove things?)
 
       // Test which organisms should replicate
       auto &pop = physics.GetBodySet();
@@ -118,27 +126,33 @@ class PopulationManager_ABPhysics {
 
       // Loop through all bodies to see which ones should replicate.
       for (auto *body : pop) {
+        // if has been deleted, delete from 
         // if not an organism, continue
-        // Add a small amount of Brownian motion
-        body->IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(drift));
-        // Organisms cannot reproduce if:
-        //  * They are already reproducing
-        //  * They are under too much pressure
-        //  * They are attached to too many bodies
-        if (body->IsReproducing()
-            || (body->GetPressure() > pop_pressure)) continue;
+        if (ORG *org = dynamic_cast<ORG*>(body)) {
+          std::cout << "ORG!" << std::endl;
+          // Add a small amount of Brownian motion
+          body->IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(drift));
+          // Organisms cannot reproduce if:
+          //  * They are already reproducing
+          //  * They are under too much pressure
+          //  * They are attached to too many bodies
+          if (body->IsReproducing()
+              || (body->GetPressure() > pop_pressure)) continue;
 
-        // Reproduction would happen here
-        // TODO: right now it's based on random chance of repro, need to make it fitness-based (when I actually have fitness values)
-        if (random_ptr->P(repro_prob) || ( (int) pop.size() < minimum_population_size) ) {
-          emp::Angle repro_angle(random_ptr->GetDouble(2.0 * emp::PI)); // What angle should we put the offspring at?
-          auto *baby_org = body->BuildOffspring(repro_angle.GetPoint(0.1));
-          new_organisms.push_back(baby_org);  // Mark this baby org to be added to the world.
+          // Reproduction would happen here
+          // TODO: right now it's based on random chance of repro, need to make it fitness-based (when I actually have fitness values)
+          if (random_ptr->P(repro_prob) || ( (int) pop.size() < minimum_population_size) ) {
+            // emp::Angle repro_angle(random_ptr->GetDouble(2.0 * emp::PI)); // What angle should we put the offspring at?
+            // auto *baby_org = body->BuildOffspring(repro_angle.GetPoint(0.1));
+            // new_organisms.push_back(baby_org);  // Mark this baby org to be added to the world.
+          }
         }
-      }
-      // Adding new bodies to world would happen here
-      for (auto new_organism : new_organisms) {
-        AddOrg(new_organism);
+        // Adding new bodies to world would happen here
+        for (auto new_organism : new_organisms) {
+          AddOrg(new_organism);
+        }
+      } else if (ABPhysicsNutrient *nutrient = dynamic_cast<ABPhysicsNutrient*>(body)) {
+        std::cout << "Nutrient!" << std::endl;
       }
     }
 

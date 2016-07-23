@@ -5,6 +5,9 @@
    Nutrients are collected by attracting them to the organism.
    Strength of nutrient A attraction: sum(0) in genome
    Strength of nutrient B attraction: sum(1) in genome
+
+   TODO:
+    * Implement update body, update links
 */
 
 #ifndef ABPHYSICSORGANISM_H
@@ -16,16 +19,19 @@
 
 #include "../modified_geometry/Body2D.h"
 
+#include "../nutrients/ABPhysicsNutrient.h"
+
 class ABPhysicsOrganism : public emp::CircleBody2D {
   private:
     int repro_count;
   public:
     emp::BitVector genome;
+    std::vector<ABPhysicsNutrient> resources;
 
     ABPhysicsOrganism(const emp::Circle<double> &_p, int genome_length = 1)
       : emp::CircleBody2D(_p),
-        genome(genome_length, false),
-        repro_count(0)
+        repro_count(0),
+        genome(genome_length, false)        
     {
       ;
     }

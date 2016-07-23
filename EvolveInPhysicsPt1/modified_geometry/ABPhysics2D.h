@@ -20,7 +20,7 @@ using namespace std::placeholders;
 
 namespace emp {
 
-  template <typename BODY_TYPE> class ABPhysics2D {
+  template <typename BODY_TYPE, typename ORG_TYPE, typename NUTRIENT_TYPE> class ABPhysics2D {
     private:
       bool configured_physics;
     protected:

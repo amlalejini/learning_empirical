@@ -1,6 +1,10 @@
 /*
   nutrients/ABPhysicsNutrient.h
    Defines the ABPhysicsNutrient class.
+
+   TODO:
+    * Implement update body, update links
+    * Eventually: nutrient clumping
 */
 
 #ifndef ABPHYSICSNUTRIENT_H
@@ -15,26 +19,24 @@
 
 class ABPhysicsNutrient : public emp::CircleBody2D {
   private:
-    static const std::map<int, std::string> type_names = { {0, "A"},
-                                                               {1, "B"} };
+    std::map<int, std::string> type_names = { {0, "A"},
+                                              {1, "B"} };
 
     int type;
     double value;
   public:
-    ABPhysicsNutrient(const emp::Circle<double> &_p, int type = 0, double value = 1.0)
+    ABPhysicsNutrient(const emp::Circle<double> &_p, int nutrient_type = 0, double nutrient_value = 1.0)
       : emp::CircleBody2D(_p),
-        this->type(type),
-        this->value(value)
-    {
-      ;
-    }
+        type(nutrient_type),
+        value(nutrient_value)
+    { ; }
 
     ~ABPhysicsNutrient() { ; }
 
     // accessors
-    double GetValue() { return value; }
-    int GetType() { return type; }
-    std::string GetTypeName() { return type_names[type]; }
+    double GetValue() const { return value; }
+    int GetType() const { return type; }
+    std::string GetTypeName() const { return type_names.at(type); }
 
     // mutators
     void SetValue(double value) { this->value = value; }
@@ -66,6 +68,6 @@ class ABPhysicsNutrient : public emp::CircleBody2D {
       return !this->operator>(other);
     }
 
-}
+};
 
 #endif

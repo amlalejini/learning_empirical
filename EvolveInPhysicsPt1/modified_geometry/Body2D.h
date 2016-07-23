@@ -130,7 +130,7 @@ namespace emp {
     {
       //EMP_TRACK_CONSTRUCT(CircleBody2D);
     }
-    ~CircleBody2D() {
+    virtual ~CircleBody2D() {
       // Remove any remaining links from this body.
       while (from_links.size()) RemoveLink(from_links[0]);
       while (to_links.size()) RemoveLink(to_links[0]);

@@ -71,7 +71,6 @@ namespace emp {
 
     // The following function will test pairs of collisions and run the passed-in function
     // on pairs of objects that *may* collide.
-
     void TestCollisions(std::function<bool(BODY_TYPE &, BODY_TYPE &)> collide_fun) {
       emp_assert(collide_fun);
 
@@ -133,8 +132,6 @@ namespace emp {
     }
 
   };
-
-
 };
 
 #endif

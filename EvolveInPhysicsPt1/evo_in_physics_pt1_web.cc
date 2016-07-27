@@ -17,15 +17,45 @@
 #include "evo/World.h"
 #include "tools/Random.h"
 
+namespace emp {
+namespace web {
+
+  // Draw a Surface2D, specifying the full colormap to be used.
+  template <typename BODY_TYPE>
+  void Draw(Canvas canvas,
+            const emp::vector<Surface2D<BODY_TYPE> *> & surface_set,
+            const emp::vector<std::string> & color_map)
+  {
+    emp_assert((int)surface_set.size() > 0);
+    canvas.Clear();
+
+    const double w = surface_set[0]->GetWidth();
+    const double h = surface_set[0]->GetHeight();
+
+    // Setup a black background for the surface
+    canvas.Rect(0, 0, w, h, "black");
+
+    for (auto *surface : surface_set) {
+      const auto &body_set = surface->GetConstBodySet();
+      for (auto *body : body_set) {
+        canvas.Circle(body->GetPerimeter(), "", color_map[body->GetColorID()]);
+      }
+    }
+  }
+}
+}
+
 namespace web = emp::web;
 
 // For now, use these parameters.
 const int RANDOM_SEED = 101;
 const int WORLD_WIDTH = 500;
 const int WORLD_HEIGHT = 500;
-const int MAX_ORG_DIAM = 10;
+const int MAX_ORG_RADIUS = 10;
 const int MIN_POP_SIZE = 4;
 const int ORG_DETACH_ON_BIRTH = true;
+const int MAX_RESOURCE_AGE = 1000;
+const int MAX_RESOURCE_COUNT = 10;
 
 bool OtherKey(const emp::html5::KeyboardEvent & evt)
 {
@@ -78,7 +108,7 @@ class EvoInPhysicsInterface {
       stats_view.SetAttr("class", "well");
       stats_view << "Update: " << web::Live([this]() { return current_update; }) << "<br>";
       stats_view << "Organism Count: " << web::Live([this]() { return world.GetSize(); }) << "<br>";
-
+      stats_view << "Resource Count: " << web::Live([this]() { return world.popM.GetNumResources(); }) << "<br>";
       // Setup canvas for world visualization
       // canvas(world width, world height, name)
       world_view << web::Canvas(WORLD_WIDTH, WORLD_HEIGHT, "evo-in-physics-pt1-world") << "<br>";
@@ -91,7 +121,7 @@ class EvoInPhysicsInterface {
     void Initialize() {
       /* Do everything necessary to initialize our run. */
       // Configure the population
-      world.ConfigPop(WORLD_WIDTH, WORLD_HEIGHT, MAX_ORG_DIAM, ORG_DETACH_ON_BIRTH, MIN_POP_SIZE);
+      world.ConfigPop(WORLD_WIDTH, WORLD_HEIGHT, MAX_ORG_RADIUS, ORG_DETACH_ON_BIRTH, MIN_POP_SIZE, MAX_RESOURCE_COUNT, MAX_RESOURCE_AGE);
       // Reset evolution back to the beginning
       DoReset();
     }
@@ -115,8 +145,9 @@ class EvoInPhysicsInterface {
       // Reset evolution
       ResetEvolution();
       // Redraw the world
-      web::Draw(world_view.Canvas("evo-in-physics-pt1-world"), world.popM.GetPhysics().GetSurface(), emp::GetHueMap(360));
-      // Redraw the stats-view
+      // web::Draw(world_view.Canvas("evo-in-physics-pt1-world"), world.popM.GetPhysics().GetOrgSurface(), emp::GetHueMap(360));
+      // web::Draw(world_view.Canvas("evo-in-physics-pt1-world"), world.popM.GetPhysics().GetResourceSurface(), emp::GetHueMap(360));      // Redraw the stats-view
+      web::Draw(world_view.Canvas("evo-in-physics-pt1-world"), world.popM.GetPhysics().GetSurfaceSet(), emp::GetHueMap(360));
       stats_view.Redraw();
       return true;
     }
@@ -156,7 +187,7 @@ class EvoInPhysicsInterface {
       // Update world
       world.Update();
       // Redraw world
-      web::Draw(world_view.Canvas("evo-in-physics-pt1-world"), world.popM.GetPhysics().GetSurface(), emp::GetHueMap(360));
+      web::Draw(world_view.Canvas("evo-in-physics-pt1-world"), world.popM.GetPhysics().GetSurfaceSet(), emp::GetHueMap(360));
       // Redraw stats
       stats_view.Redraw();
       // // Print out population...

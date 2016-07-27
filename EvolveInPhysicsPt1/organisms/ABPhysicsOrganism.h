@@ -14,6 +14,7 @@
 #define ABPHYSICSORGANISM_H
 
 #include <iostream>
+#include <string>
 
 #include "tools/BitVector.h"
 
@@ -31,9 +32,9 @@ class ABPhysicsOrganism : public emp::CircleBody2D {
     ABPhysicsOrganism(const emp::Circle<double> &_p, int genome_length = 1)
       : emp::CircleBody2D(_p),
         repro_count(0),
-        genome(genome_length, false)        
+        genome(genome_length, false)
     {
-      ;
+      this->color_id = 20;
     }
 
     ~ABPhysicsOrganism() { ; }

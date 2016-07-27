@@ -31,6 +31,7 @@
 #include "Circle2D.h"
 
 #include <iostream>
+#include <string>
 
 namespace emp {
 

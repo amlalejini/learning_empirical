@@ -135,12 +135,21 @@ class PopulationManager_ABPhysics {
       for (auto *org : pop) {
         // Add a small amount of Brownian motion
         org->IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(drift));
+        // Who are you linked to?
+        // std::cout << "===== ORG LINKS =====" << std::endl;
+        // std::cout << " Link count: " << org->GetLinkCount() << std::endl;
+        // for (auto *res : resources) {
+        //   if (org->IsLinkedFrom(*res)) {
+        //     std::cout << "  Linked to: " << res->GetValue() << std::endl;
+        //   }
+        // }
         // Organisms cannot reproduce if:
         //  * They are already reproducing
         //  * They are under too much pressure
         //  * They are attached to too many bodies
         if (org->IsReproducing()
-            || (org->GetPressure() > pop_pressure)) continue;
+            || (org->GetPressure() > pop_pressure)
+            || (this->GetSize() >= minimum_population_size)) continue;
 
         // Reproduction would happen here
         // TODO: right now it's based on random chance of repro, need to make it fitness-based (when I actually have fitness values)
@@ -162,7 +171,9 @@ class PopulationManager_ABPhysics {
       // While there aren't enough resources in the environment, add more randomly
       while (GetNumResources() < resource_count) {
         emp::Point<double> res_center(random_ptr->GetDouble(10.0, physics.GetWidth() - 10.0), random_ptr->GetDouble(10.0, physics.GetHeight()));
-        AddResource(new RESOURCE(emp::Circle<double>(emp::Circle<double>(res_center, max_organism_radius * 2.0))));
+        RESOURCE *new_resource = new RESOURCE(emp::Circle<double>(emp::Circle<double>(res_center, max_organism_radius * 2.0)));
+        new_resource->SetValue(GetNumResources());
+        AddResource(new_resource);
       }
     }
 };

@@ -19,9 +19,6 @@
 
 class ABPhysicsNutrient : public emp::CircleBody2D {
   private:
-    std::map<int, std::string> type_names = { {0, "A"},
-                                              {1, "B"} };
-
     int type;
     double value;
     int age;
@@ -37,7 +34,6 @@ class ABPhysicsNutrient : public emp::CircleBody2D {
     // accessors
     double GetValue() const { return value; }
     int GetType() const { return type; }
-    std::string GetTypeName() const { return type_names.at(type); }
     int GetAge() const { return age; }
     // mutators
     void SetValue(double value) { this->value = value; }
@@ -48,6 +44,15 @@ class ABPhysicsNutrient : public emp::CircleBody2D {
     void BodyUpdate(double change_factor=1, bool detach_on_birth=true) {
       CircleBody2D::BodyUpdate(change_factor, detach_on_birth);
       this->Age(1); // Age by 1 update
+    }
+
+    emp::vector< BodyLink<CircleBody2D> * > GetConsumptionLinks() {
+      emp::vector< BodyLink<CircleBody2D> *> consumption_links;
+      for (auto *link : this->to_links) {
+        if (link->type == LINK_TYPE::CONSUME_RESOURCE)
+          consumption_links.push_back(link);
+      }
+      return consumption_links;
     }
 
     // operator overloads

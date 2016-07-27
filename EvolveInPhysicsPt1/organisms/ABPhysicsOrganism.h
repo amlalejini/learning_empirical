@@ -25,9 +25,10 @@
 class ABPhysicsOrganism : public emp::CircleBody2D {
   private:
     int repro_count;
+    using emp::CircleBody2D::from_links;
+    using emp::CircleBody2D::to_links;
   public:
     emp::BitVector genome;
-    std::vector<ABPhysicsNutrient> resources;
 
     ABPhysicsOrganism(const emp::Circle<double> &_p, int genome_length = 1)
       : emp::CircleBody2D(_p),
@@ -50,10 +51,10 @@ class ABPhysicsOrganism : public emp::CircleBody2D {
       return offspring;
     }
 
-    // ABPhysicsOrganism * BuildOffspring() {
-    //   /* Build and return an offspring from this organism. Generate offset from parent. */
-    //   return ;
-    // }
+    void BindResource(ABPhysicsNutrient &resource, double cur_dist, double target_dist, double consumption_strength) {
+      emp_assert(!IsLinked(resource));  // Don't link twice!
+      this->AddLink(LINK_TYPE::CONSUME_RESOURCE, resource, cur_dist, target_dist, consumption_strength);
+    }
 
     bool operator==(const ABPhysicsOrganism &other) const {
       /* Do these organisms have the same genotype? */

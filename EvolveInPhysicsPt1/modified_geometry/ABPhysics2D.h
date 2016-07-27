@@ -20,6 +20,7 @@
 using namespace std::placeholders;
 
 #include "Surface2D.h"
+#include "Body2D.h"
 
 namespace emp {
 
@@ -186,7 +187,7 @@ namespace emp {
           No matter strengh, make link. Will hand out energy proportional to link strengths.
 
         */
-        if (org_body->IsLinked(*res_body)) return false; // This pair is already linked, move on.
+        if (org_body->IsLinked(*resource_body)) return false; // This pair is already linked, move on.
 
         // Calculate distance between organism and resource.
         const Point<double> dist = org_body->GetCenter() - resource_body->GetCenter();
@@ -198,7 +199,12 @@ namespace emp {
         if (sq_pair_dist >= sq_min_dist) { return false; }
 
         // There is a collision, and resource and organism are not already linked!
-        
+        const double true_dist = sqrt(sq_pair_dist);
+        // Determine strength of consumption:
+        double strength;
+        if (sq_pair_dist == 0.0) strength = sq_min_dist / 0.001;
+        else strength = sq_min_dist / sq_pair_dist;
+        org_body->BindResource(*resource_body, true_dist, sq_min_dist, strength);
         return true;
       }
 
@@ -320,10 +326,18 @@ namespace emp {
         // Resource removal
         ///////////////////////////////
         // Remove rotten (those that have passed their expiration date) resources
+        // Remove consumed resources
         cur_size = (int) resource_body_set.size();
         cur_id = 0;
         while (cur_id < cur_size) {
           emp_assert(resource_body_set[cur_id] != nullptr);
+          // Consumption
+          auto consumption_links = resource_body_set[cur_id]->GetConsumptionLinks();
+          // Who has the strongest link?
+          // Feed to strongest link.
+          // Remove this resource. (will clean up links)
+          std::cout << "Consumption links: " << consumption_links.size() << std::endl;
+          // Rotten removal
           const int cur_age = resource_body_set[cur_id]->GetAge();
           if (cur_age > max_resource_age) {
             delete resource_body_set[cur_id];

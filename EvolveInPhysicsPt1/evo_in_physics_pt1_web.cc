@@ -55,7 +55,7 @@ const int MAX_ORG_RADIUS = 10;
 const int MIN_POP_SIZE = 4;
 const int ORG_DETACH_ON_BIRTH = true;
 const int MAX_RESOURCE_AGE = 1000;
-const int MAX_RESOURCE_COUNT = 10;
+const int MAX_RESOURCE_COUNT = 5;
 
 bool OtherKey(const emp::html5::KeyboardEvent & evt)
 {

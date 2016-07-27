@@ -42,20 +42,22 @@ namespace emp {
     // REPRODUCTION -> "from" is gestating "to"
     // ATTACK -> "from" is trying to eat "to"
     // PARASITE -> "from" is stealing resources from "to"
-    enum class LINK_TYPE { DEFAULT, REPRODUCTION, ATTACK, PARASITE };
+    // CONSUME_RESOURCE -> "from" is eating "to" where "from" is an organism and "to" is a resource.
+    enum class LINK_TYPE { DEFAULT, REPRODUCTION, ATTACK, PARASITE, CONSUME_RESOURCE };
 
     template <typename BODY_TYPE>
     struct BodyLink {
-      LINK_TYPE type;      // DEFAULT, REPRODUCTION, ATTACK, PARASITE
-      BODY_TYPE * from;    // Initiator of the connection (e.g., parent, attacker)
-      BODY_TYPE * to;      // Target of the connection (e.g., offspring, prey/host)
-      double cur_dist;     // How far are bodies currently being kept apart?
-      double target_dist;  // How far should the be moved to? (e.g., if growing)
+      LINK_TYPE type;       // DEFAULT, REPRODUCTION, ATTACK, PARASITE
+      BODY_TYPE * from;     // Initiator of the connection (e.g., parent, attacker)
+      BODY_TYPE * to;       // Target of the connection (e.g., offspring, prey/host)
+      double cur_dist;      // How far are bodies currently being kept apart?
+      double target_dist;   // How far should the be moved to? (e.g., if growing)
+      double link_strength; // How strong is the link? (used to determine who wins in competive links)
 
       BodyLink() : type(LINK_TYPE::DEFAULT), from(nullptr), to(nullptr), cur_dist(0)
-                 , target_dist(0) { ; }
-      BodyLink(LINK_TYPE t, BODY_TYPE * _frm, BODY_TYPE * _to, double cur=0, double target=0)
-        : type(t), from(_frm), to(_to), cur_dist(cur), target_dist(target) { ; }
+                 , target_dist(0), link_strength(0) { ; }
+      BodyLink(LINK_TYPE t, BODY_TYPE * _frm, BODY_TYPE * _to, double cur=0, double target=0, double lnk_str=0)
+        : type(t), from(_frm), to(_to), cur_dist(cur), target_dist(target), link_strength(lnk_str) { ; }
       BodyLink(const BodyLink &) = default;
       ~BodyLink() { ; }
     };
@@ -163,11 +165,11 @@ namespace emp {
 
     int GetLinkCount() const { return (int) (from_links.size() + to_links.size()); }
 
-    void AddLink(LINK_TYPE type, CircleBody2D & link_org, double cur_dist, double target_dist) {
+    void AddLink(LINK_TYPE type, CircleBody2D & link_org, double cur_dist, double target_dist, double link_strength = 0) {
       emp_assert(!IsLinked(link_org));  // Don't link twice!
 
       // Build connections in both directions.
-      auto * new_link = new BodyLink<CircleBody2D>(type, this, &link_org, cur_dist, target_dist);
+      auto * new_link = new BodyLink<CircleBody2D>(type, this, &link_org, cur_dist, target_dist, link_strength);
       from_links.push_back(new_link);
       link_org.to_links.push_back(new_link);
     }

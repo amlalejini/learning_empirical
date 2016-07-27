@@ -51,11 +51,15 @@ namespace web = emp::web;
 const int RANDOM_SEED = 101;
 const int WORLD_WIDTH = 500;
 const int WORLD_HEIGHT = 500;
-const int MAX_ORG_RADIUS = 10;
-const int MIN_POP_SIZE = 4;
-const int ORG_DETACH_ON_BIRTH = true;
-const int MAX_RESOURCE_AGE = 1000;
-const int MAX_RESOURCE_COUNT = 5;
+const double MAX_ORG_RADIUS = 100;         // Maximum organism radius.
+const int MIN_POP_SIZE = 4;               // Minimum population size.
+const int MAX_POP_SIZE = 200;             // Max population size.
+const int ORG_DETACH_ON_BIRTH = true;     // Should offspring remain linked after birth?
+const int MAX_RESOURCE_AGE = 1000;        // Max allowed age for resources.
+const int MAX_RESOURCE_COUNT = 5;         // Max number of resources that can exist in the world.
+const double COST_OF_REPRODUCTION = 100;  // How much energy is necessary for an organism to reproduce?
+const double REPRO_PROB = 0.2;
+const int SEED_POP_SIZE = 4;
 
 bool OtherKey(const emp::html5::KeyboardEvent & evt)
 {
@@ -121,7 +125,7 @@ class EvoInPhysicsInterface {
     void Initialize() {
       /* Do everything necessary to initialize our run. */
       // Configure the population
-      world.ConfigPop(WORLD_WIDTH, WORLD_HEIGHT, MAX_ORG_RADIUS, ORG_DETACH_ON_BIRTH, MIN_POP_SIZE, MAX_RESOURCE_COUNT, MAX_RESOURCE_AGE);
+      world.ConfigPop(WORLD_WIDTH, WORLD_HEIGHT, MAX_ORG_RADIUS, ORG_DETACH_ON_BIRTH, MIN_POP_SIZE, MAX_POP_SIZE, MAX_RESOURCE_COUNT, MAX_RESOURCE_AGE, COST_OF_REPRODUCTION, REPRO_PROB);
       // Reset evolution back to the beginning
       DoReset();
     }
@@ -136,7 +140,7 @@ class EvoInPhysicsInterface {
       // - Get mid-point of world.
       const emp::Point<double> mid_point(WORLD_WIDTH / 2.0, WORLD_HEIGHT / 2.0);
       int org_radius = 10;
-      // - Insert ancestor into population.
+      // - Insert ancestor seeds into population.
       world.Insert(ABPhysicsOrganism(emp::Circle<double>(mid_point, org_radius)));
     }
 

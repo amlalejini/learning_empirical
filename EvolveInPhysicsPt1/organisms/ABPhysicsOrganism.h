@@ -7,7 +7,7 @@
    Strength of nutrient B attraction: sum(1) in genome
 
    TODO:
-    * Implement update body, update links
+    * currently IsReproducing just returns repro count (should separate how many offspring org has had vs. if it is currently reproducing)
 */
 
 #ifndef ABPHYSICSORGANISM_H
@@ -24,21 +24,45 @@
 
 class ABPhysicsOrganism : public emp::CircleBody2D {
   private:
-    int repro_count;
+    int offspring_count;
     using emp::CircleBody2D::from_links;
     using emp::CircleBody2D::to_links;
+    double energy;
+    int resources_collected;
   public:
     emp::BitVector genome;
 
     ABPhysicsOrganism(const emp::Circle<double> &_p, int genome_length = 1)
       : emp::CircleBody2D(_p),
-        repro_count(0),
+        offspring_count(0),
+        energy(0),
+        resources_collected(0),
         genome(genome_length, false)
     {
-      this->color_id = 20;
+      this->color_id = energy;
     }
 
     ~ABPhysicsOrganism() { ; }
+
+    double GetEnergy() const { return energy; }
+    int GetNumResourcesCollected() const { return resources_collected; }
+    int GetOffspringCount() const { return offspring_count; }
+
+    ABPhysicsOrganism * Reproduce(emp::Point<double> offset, double cost = 0.0) {
+      /* Handles organism reproduction!
+        For now, trust caller to respect reproduction costs. Perhaps in the future, we return a
+        nullptr if reproduction fails (not enough energy, too old, etc.).
+      */
+      // Update energy (can become negative..)
+      energy -= cost;
+      offspring_count++;
+      repro_count++;
+      // Build offspring
+      auto *offspring = this->BuildOffspring(offset);
+      // Link offspring
+      AddLink(LINK_TYPE::REPRODUCTION, *offspring, offset.Magnitude(), this->GetRadius() * 2.0);
+      return offspring;
+    }
 
     ABPhysicsOrganism * BuildOffspring(emp::Point<double> offset) {
       /* Build and return an offspring from this organism given offset from parent. */
@@ -47,8 +71,18 @@ class ABPhysicsOrganism : public emp::CircleBody2D {
       // Create the offspring as a paired link.
       auto *offspring = new ABPhysicsOrganism(emp::Circle<double>(this->GetCenter(), this->GetRadius()));
       offspring->Translate(offset);
-      repro_count++;
       return offspring;
+    }
+
+    bool ConsumeResource(ABPhysicsNutrient &resource) {
+      /*
+        Attempt to consume resource.
+        If success, return true; otherwise, return false.
+        Currently no reason so fail.
+      */
+      energy += resource.GetValue();
+      resources_collected++;
+      return true;
     }
 
     void BindResource(ABPhysicsNutrient &resource, double cur_dist, double target_dist, double consumption_strength) {

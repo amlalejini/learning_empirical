@@ -49,21 +49,25 @@ class PopulationManager_ABPhysics {
     // TODO: pull these in from outside pop manager
     const double pop_pressure = 1.0;
     int minimum_population_size;
+    int maximum_population_size;
     int resource_count;
     int max_resource_age;
-    double repro_prob;
+    double reproduction_prob;
     double drift;
     double max_organism_radius;
+    double reproduction_cost;
 
   public:
     PopulationManager_ABPhysics()
       : physics(),
         minimum_population_size(1),
+        maximum_population_size(100),
         resource_count(0),
         max_resource_age(100),
-        repro_prob(0.003),
+        reproduction_prob(0.003),
         drift(0.15),
-        max_organism_radius(4.0)
+        max_organism_radius(4.0),
+        reproduction_cost(10.0)
     {
       ;
     }
@@ -91,7 +95,7 @@ class PopulationManager_ABPhysics {
 
     void Clear() { physics.Clear(); }
 
-    void ConfigPop(double width, double height, double max_org_radius = 20, bool detach = true, int min_pop_size = 1, int res_cnt = 0, int max_res_age = 10) {
+    void ConfigPop(double width, double height, double max_org_radius = 20, bool detach = true, int min_pop_size = 1, int max_pop_size = 100, int res_cnt = 0, int max_res_age = 10, double repro_cost = 10.0, double repro_prob = 0.003) {
       /*
         Configure the population manager (and the underlying physics) given the following parameters:
           * width: width of physics world (in world units)
@@ -101,9 +105,12 @@ class PopulationManager_ABPhysics {
       */
       // Configure population-specific variables
       minimum_population_size = min_pop_size;
+      maximum_population_size = max_pop_size;
       resource_count = res_cnt;
       max_resource_age = max_res_age;
       max_organism_radius = max_org_radius;
+      reproduction_cost = repro_cost;
+      reproduction_prob = repro_prob;
       // Configure the physics
       physics.ConfigPhysics(width, height, max_organism_radius, detach, max_resource_age);
     }
@@ -135,27 +142,21 @@ class PopulationManager_ABPhysics {
       for (auto *org : pop) {
         // Add a small amount of Brownian motion
         org->IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(drift));
-        // Who are you linked to?
-        // std::cout << "===== ORG LINKS =====" << std::endl;
-        // std::cout << " Link count: " << org->GetLinkCount() << std::endl;
-        // for (auto *res : resources) {
-        //   if (org->IsLinkedFrom(*res)) {
-        //     std::cout << "  Linked to: " << res->GetValue() << std::endl;
-        //   }
-        // }
+        // Update organism color based on energy levels! (ALERT! MAGIC NUMBER HERE)
+        org->SetColorID(((int) org->GetEnergy()) % 360);  // This should happen elsewhere, pop manager doesn't care about drawing... But for now, this is easy.
         // Organisms cannot reproduce if:
         //  * They are already reproducing
         //  * They are under too much pressure
         //  * They are attached to too many bodies
         if (org->IsReproducing()
             || (org->GetPressure() > pop_pressure)
-            || (this->GetSize() >= minimum_population_size)) continue;
+            || (this->GetSize() >= maximum_population_size)) continue;
 
-        // Reproduction would happen here
-        // TODO: right now it's based on random chance of repro, need to make it fitness-based (when I actually have fitness values)
-        if (random_ptr->P(repro_prob) || ( (int) pop.size() < minimum_population_size) ) {
+        // Reproduction happens here.
+        // If organism has enough energy, reproduce with Probability(repro_prob) || for sure reproduce if pop size is below minimum.
+        if ( (org->GetEnergy() >= reproduction_cost) ) {
           emp::Angle repro_angle(random_ptr->GetDouble(2.0 * emp::PI)); // What angle should we put the offspring at?
-          auto *baby_org = org->BuildOffspring(repro_angle.GetPoint(0.1));
+          auto *baby_org = org->Reproduce(repro_angle.GetPoint(0.1), reproduction_cost);
           new_organisms.push_back(baby_org);  // Mark this baby org to be added to the world.
         }
       } // end population loop
@@ -171,8 +172,8 @@ class PopulationManager_ABPhysics {
       // While there aren't enough resources in the environment, add more randomly
       while (GetNumResources() < resource_count) {
         emp::Point<double> res_center(random_ptr->GetDouble(10.0, physics.GetWidth() - 10.0), random_ptr->GetDouble(10.0, physics.GetHeight()));
-        RESOURCE *new_resource = new RESOURCE(emp::Circle<double>(emp::Circle<double>(res_center, max_organism_radius * 2.0)));
-        new_resource->SetValue(GetNumResources());
+        RESOURCE *new_resource = new RESOURCE(emp::Circle<double>(emp::Circle<double>(res_center, 15)));
+        new_resource->SetValue(20);
         AddResource(new_resource);
       }
     }

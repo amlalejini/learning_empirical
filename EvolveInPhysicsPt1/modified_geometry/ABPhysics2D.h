@@ -333,10 +333,26 @@ namespace emp {
           emp_assert(resource_body_set[cur_id] != nullptr);
           // Consumption
           auto consumption_links = resource_body_set[cur_id]->GetConsumptionLinks();
-          // Who has the strongest link?
-          // Feed to strongest link.
-          // Remove this resource. (will clean up links)
-          std::cout << "Consumption links: " << consumption_links.size() << std::endl;
+          // Is anyone trying to consume this resource?
+          if ((int) consumption_links.size() > 0) {
+            // Who has the strongest link?
+            int max_link = 0;
+            for (int l = 0; l < (int) consumption_links.size(); l++) {
+              if (consumption_links[l]->link_strength > consumption_links[max_link]->link_strength) max_link = l;
+            }
+            // Feed resource to strongest link
+            // @amlalejini -- not sure how I feel about dynamic casting here.. Open to suggestions for improvements.
+            ORG_TYPE *org_body;
+            if ( (org_body = dynamic_cast<ORG_TYPE*>(consumption_links[max_link]->from)) ) {
+              // If this is actually an organism, feed it!
+              org_body->ConsumeResource(*resource_body_set[cur_id]);
+            }
+            // Remove the resource (delete will clean up the resource's links)
+            delete resource_body_set[cur_id];
+            cur_size--;
+            resource_body_set[cur_id] = resource_body_set[cur_size];
+            continue; // No need to check for removal due to rottenness.
+          }
           // Rotten removal
           const int cur_age = resource_body_set[cur_id]->GetAge();
           if (cur_age > max_resource_age) {

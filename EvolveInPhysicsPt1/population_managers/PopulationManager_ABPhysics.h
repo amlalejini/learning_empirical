@@ -56,6 +56,7 @@ class PopulationManager_ABPhysics {
     double drift;
     double max_organism_radius;
     double reproduction_cost;
+    double mutation_rate;
 
   public:
     PopulationManager_ABPhysics()
@@ -67,7 +68,8 @@ class PopulationManager_ABPhysics {
         reproduction_prob(0.003),
         drift(0.15),
         max_organism_radius(4.0),
-        reproduction_cost(10.0)
+        reproduction_cost(10.0),
+        mutation_rate(0.01)
     {
       ;
     }
@@ -95,7 +97,7 @@ class PopulationManager_ABPhysics {
 
     void Clear() { physics.Clear(); }
 
-    void ConfigPop(double width, double height, double max_org_radius = 20, bool detach = true, int min_pop_size = 1, int max_pop_size = 100, int res_cnt = 0, int max_res_age = 10, double repro_cost = 10.0, double repro_prob = 0.003) {
+    void ConfigPop(double width, double height, double max_org_radius = 20, bool detach = true, int min_pop_size = 1, int max_pop_size = 100, int res_cnt = 0, int max_res_age = 10, double repro_cost = 10.0, double repro_prob = 0.003, double mut_rate = 0.01) {
       /*
         Configure the population manager (and the underlying physics) given the following parameters:
           * width: width of physics world (in world units)
@@ -111,6 +113,7 @@ class PopulationManager_ABPhysics {
       max_organism_radius = max_org_radius;
       reproduction_cost = repro_cost;
       reproduction_prob = repro_prob;
+      mutation_rate = mut_rate;
       // Configure the physics
       physics.ConfigPhysics(width, height, max_organism_radius, detach, max_resource_age);
     }
@@ -156,7 +159,7 @@ class PopulationManager_ABPhysics {
         // If organism has enough energy, reproduce with Probability(repro_prob) || for sure reproduce if pop size is below minimum.
         if ( (org->GetEnergy() >= reproduction_cost) ) {
           emp::Angle repro_angle(random_ptr->GetDouble(2.0 * emp::PI)); // What angle should we put the offspring at?
-          auto *baby_org = org->Reproduce(repro_angle.GetPoint(0.1), reproduction_cost);
+          auto *baby_org = org->Reproduce(repro_angle.GetPoint(0.1), random_ptr, reproduction_cost, mutation_rate);
           new_organisms.push_back(baby_org);  // Mark this baby org to be added to the world.
         }
       } // end population loop

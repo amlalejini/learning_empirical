@@ -17,6 +17,7 @@
 #include <string>
 
 #include "tools/BitVector.h"
+#include "tools/Random.h"
 
 #include "../modified_geometry/Body2D.h"
 
@@ -29,17 +30,28 @@ class ABPhysicsOrganism : public emp::CircleBody2D {
     using emp::CircleBody2D::to_links;
     double energy;
     int resources_collected;
+
   public:
     emp::BitVector genome;
 
-    ABPhysicsOrganism(const emp::Circle<double> &_p, int genome_length = 1)
+    ABPhysicsOrganism(const emp::Circle<double> &_p, int genome_length = 1, bool random_genome = false)
       : emp::CircleBody2D(_p),
         offspring_count(0),
         energy(0),
         resources_collected(0),
         genome(genome_length, false)
     {
-      this->color_id = energy;
+      ;
+    }
+
+    ABPhysicsOrganism(ABPhysicsOrganism *parent)
+      : emp::CircleBody2D(parent->GetPerimeter()),
+        offspring_count(0),
+        energy(0),
+        resources_collected(0),
+        genome(parent->genome)
+    {
+      ;
     }
 
     ~ABPhysicsOrganism() { ; }
@@ -48,7 +60,7 @@ class ABPhysicsOrganism : public emp::CircleBody2D {
     int GetNumResourcesCollected() const { return resources_collected; }
     int GetOffspringCount() const { return offspring_count; }
 
-    ABPhysicsOrganism * Reproduce(emp::Point<double> offset, double cost = 0.0) {
+    ABPhysicsOrganism * Reproduce(emp::Point<double> offset, emp::Random *r, double cost = 0.0, double mut_rate = 0.0) {
       /* Handles organism reproduction!
         For now, trust caller to respect reproduction costs. Perhaps in the future, we return a
         nullptr if reproduction fails (not enough energy, too old, etc.).
@@ -59,6 +71,10 @@ class ABPhysicsOrganism : public emp::CircleBody2D {
       repro_count++;
       // Build offspring
       auto *offspring = this->BuildOffspring(offset);
+      // Mutate offspring
+      for (int i = 0; i < offspring->genome.GetSize(); i++) {
+        if (r->P(mut_rate)) offspring->genome[i] = !offspring->genome[i];
+      }
       // Link offspring
       AddLink(LINK_TYPE::REPRODUCTION, *offspring, offset.Magnitude(), this->GetRadius() * 2.0);
       return offspring;
@@ -69,7 +85,7 @@ class ABPhysicsOrganism : public emp::CircleBody2D {
       // Offspring cannot be right on top of parent.
       emp_assert(offset.GetX() != 0 || offset.GetY() != 0);
       // Create the offspring as a paired link.
-      auto *offspring = new ABPhysicsOrganism(emp::Circle<double>(this->GetCenter(), this->GetRadius()));
+      auto *offspring = new ABPhysicsOrganism(this);
       offspring->Translate(offset);
       return offspring;
     }

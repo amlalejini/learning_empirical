@@ -60,6 +60,8 @@ const int MAX_RESOURCE_COUNT = 5;         // Max number of resources that can ex
 const double COST_OF_REPRODUCTION = 100;  // How much energy is necessary for an organism to reproduce?
 const double REPRO_PROB = 0.2;
 const int SEED_POP_SIZE = 4;
+const int GENOME_LENGTH = 50;
+const double MUTATION_RATE = 0.1;
 
 bool OtherKey(const emp::html5::KeyboardEvent & evt)
 {
@@ -125,7 +127,7 @@ class EvoInPhysicsInterface {
     void Initialize() {
       /* Do everything necessary to initialize our run. */
       // Configure the population
-      world.ConfigPop(WORLD_WIDTH, WORLD_HEIGHT, MAX_ORG_RADIUS, ORG_DETACH_ON_BIRTH, MIN_POP_SIZE, MAX_POP_SIZE, MAX_RESOURCE_COUNT, MAX_RESOURCE_AGE, COST_OF_REPRODUCTION, REPRO_PROB);
+      world.ConfigPop(WORLD_WIDTH, WORLD_HEIGHT, MAX_ORG_RADIUS, ORG_DETACH_ON_BIRTH, MIN_POP_SIZE, MAX_POP_SIZE, MAX_RESOURCE_COUNT, MAX_RESOURCE_AGE, COST_OF_REPRODUCTION, REPRO_PROB, MUTATION_RATE);
       // Reset evolution back to the beginning
       DoReset();
     }
@@ -141,7 +143,11 @@ class EvoInPhysicsInterface {
       const emp::Point<double> mid_point(WORLD_WIDTH / 2.0, WORLD_HEIGHT / 2.0);
       int org_radius = 10;
       // - Insert ancestor seeds into population.
-      world.Insert(ABPhysicsOrganism(emp::Circle<double>(mid_point, org_radius)));
+      ABPhysicsOrganism ancestor = ABPhysicsOrganism(emp::Circle<double>(mid_point, org_radius), GENOME_LENGTH, true);
+      for (int i = 0; i < ancestor.genome.GetSize(); i++) {
+        if (random.P(0.5)) ancestor.genome[i] = !ancestor.genome[i];
+      }
+      world.Insert(ancestor);
     }
 
     bool DoReset() {
@@ -149,8 +155,6 @@ class EvoInPhysicsInterface {
       // Reset evolution
       ResetEvolution();
       // Redraw the world
-      // web::Draw(world_view.Canvas("evo-in-physics-pt1-world"), world.popM.GetPhysics().GetOrgSurface(), emp::GetHueMap(360));
-      // web::Draw(world_view.Canvas("evo-in-physics-pt1-world"), world.popM.GetPhysics().GetResourceSurface(), emp::GetHueMap(360));      // Redraw the stats-view
       web::Draw(world_view.Canvas("evo-in-physics-pt1-world"), world.popM.GetPhysics().GetSurfaceSet(), emp::GetHueMap(360));
       stats_view.Redraw();
       return true;

@@ -122,7 +122,7 @@ class PopulationManager_ABPhysics {
       reproduction_prob = repro_prob;
       mutation_rate = mut_rate;
       // Configure the physics
-      physics.ConfigPhysics(width, height, max_organism_radius, detach, max_resource_age);
+      physics.ConfigPhysics(width, height, random_ptr, max_organism_radius, detach, max_resource_age);
     }
 
     ABPhysics2D<ORG, RESOURCE> & GetPhysics() { return physics; }
@@ -153,7 +153,7 @@ class PopulationManager_ABPhysics {
       // Loop through all bodies to see which ones should replicate.
       for (auto *org : pop) {
         // Add a small amount of Brownian motion
-        //org->IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(drift));
+        org->IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(drift));
         // Update organism color based on energy levels! (ALERT! MAGIC NUMBER HERE)
         int num_ones = org->genome.CountOnes();
         int num_zeros = org->genome.GetSize() - num_ones;

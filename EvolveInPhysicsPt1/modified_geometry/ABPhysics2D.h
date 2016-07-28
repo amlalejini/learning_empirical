@@ -9,6 +9,7 @@
 // NOTES:
 //  * Increase max bounding box size by factor of pull strength (organisms may collide with further away resources)
 //  * At the moment, max org radius/diameter means nothing
+//  * TODO: incorporate mass into collisions!
 #ifndef EMP_ABPHYSICS_2D_H
 #define EMP_ABPHYSICS_2D_H
 
@@ -21,6 +22,7 @@ using namespace std::placeholders;
 
 #include "Surface2D.h"
 #include "Body2D.h"
+#include "tools/Random.h"
 
 namespace emp {
 
@@ -37,6 +39,7 @@ namespace emp {
       bool detach_on_birth; // Should bodies detach from their parent when born?
       Point<double> *max_pos;
       int max_resource_age;
+      emp::Random *random_ptr;
     public:
       ABPhysics2D()
         : configured_physics(false),
@@ -46,11 +49,11 @@ namespace emp {
         ;
       }
 
-      ABPhysics2D(double width, double height, double max_org_radius = 20, bool detach = true, int max_res_age = 100) {
+      ABPhysics2D(double width, double height, emp::Random *r, double max_org_radius = 20, bool detach = true, int max_res_age = 100) {
         /*
           Something akin to the original Physics2D constructor.
         */
-        ConfigPhysics(width, height, max_org_radius, detach, max_res_age);
+        ConfigPhysics(width, height, r, max_org_radius, detach, max_res_age);
       }
 
       ~ABPhysics2D() {
@@ -73,7 +76,7 @@ namespace emp {
         return *this;
       }
 
-      void ConfigPhysics(double width, double height, double max_org_radius = 20, bool detach = true, int max_res_age = 100) {
+      void ConfigPhysics(double width, double height, emp::Random *r, double max_org_radius = 20, bool detach = true, int max_res_age = 100) {
         /*
           Configure physics. This function must be called before using Physics2D.
         */
@@ -85,6 +88,7 @@ namespace emp {
         surface_set.push_back( (Surface2D<CircleBody2D> *) resource_surface);
         max_pos = new Point<double>(width, height);
         configured_physics = true;
+        random_ptr = r;
       }
 
       ABPhysics2D & AddOrg(ORG_TYPE *in_org) {
@@ -192,19 +196,69 @@ namespace emp {
         // Calculate distance between organism and resource.
         const Point<double> dist = org_body->GetCenter() - resource_body->GetCenter();
         const double sq_pair_dist = dist.SquareMagnitude();
-        const double radius_sum = org_body->GetEffectorRadius(resource_body->GetType()) + resource_body->GetRadius(); // This is where I would put any radius extentions for the organism.
+        const double radius_sum = org_body->GetRadius() + resource_body->GetRadius(); // This is where I would put any radius extentions for the organism.
         const double sq_min_dist = radius_sum * radius_sum;
 
         // If there was no collision, return false.
         if (sq_pair_dist >= sq_min_dist) { return false; }
-
-        // There is a collision, and resource and organism are not already linked!
         const double true_dist = sqrt(sq_pair_dist);
-        // Determine strength of consumption:
-        double strength;
-        if (sq_pair_dist == 0.0) strength = sq_min_dist / 0.001;
-        else strength = sq_min_dist / sq_pair_dist;
-        org_body->BindResource(*resource_body, true_dist, sq_min_dist, strength);
+        // There is a collision, and resource and organism are not already linked!
+        // Do we consume or bounce?
+        if (random_ptr->P(org_body->GetResourceConsumptionProb(*resource_body))) {
+          // We consume.
+          // Determine strength of consumption:
+          double strength;
+          if (sq_pair_dist == 0.0) strength = sq_min_dist / 0.001;
+          else strength = sq_min_dist / sq_pair_dist;
+          org_body->BindResource(*resource_body, true_dist, sq_min_dist, strength);
+        } else {
+          // We bounce.
+          // Collision happened: Handle it and return true.
+          if (sq_pair_dist == 0.0) {
+            // If the shapes are on top of each other, we have a problem. Shift one!
+            resource_body->Translate(Point<double>(0.01, 0.01));
+          }
+
+          // @CAO If objects can phase or explode, identify that here.
+
+          // Re-adjust position to remove overlap.
+          const double overlap_dist = ((double) radius_sum) - true_dist;
+          const double overlap_frac = overlap_dist / true_dist;
+          const Point<double> cur_shift = dist * (overlap_frac / 2.0);
+          org_body->AddShift(cur_shift);   // Split the re-adjustment between the two colliding bodies.
+          resource_body->AddShift(-cur_shift);
+
+          // @CAO if we have inelastic collisions, we just take the weighted average of velocities
+          // and let them move together.
+          double x1, y1, x2, y2;
+          if (dist.GetX() == 0) {
+            // If vertically aligned, just swap y velocities.
+            x1 = org_body->GetVelocity().GetX();  y1 = resource_body->GetVelocity().GetY();
+            x2 = resource_body->GetVelocity().GetX();  y2 = org_body->GetVelocity().GetY();
+
+            org_body->SetVelocity(Point<double>(x1, y1));
+            resource_body->SetVelocity(Point<double>(x2, y2));
+          } else if (dist.GetY() == 0) {
+            // If horizontally aligned, just swap x velocities.
+            x1 = resource_body->GetVelocity().GetX();  y1 = org_body->GetVelocity().GetY();
+            x2 = org_body->GetVelocity().GetX();  y2 = resource_body->GetVelocity().GetY();
+
+            org_body->SetVelocity(Point<double>(x1, y1));
+            resource_body->SetVelocity(Point<double>(x2, y2));
+          } else {
+            // General case.
+            const Point<double> rel_velocity(resource_body->GetVelocity() - org_body->GetVelocity());
+            double normal_a = dist.GetY() / dist.GetX();
+            x1 = ( rel_velocity.GetX() + normal_a * rel_velocity.GetY() )
+              / ( normal_a * normal_a + 1 );
+            y1 = normal_a * x1;
+            x2 = rel_velocity.GetX() - x1;
+            y2 = - (1 / normal_a) * x2;
+
+            resource_body->SetVelocity(org_body->GetVelocity() + Point<double>(x2, y2));
+            org_body->SetVelocity(org_body->GetVelocity() + Point<double>(x1, y1));
+          }
+        }
         return true;
       }
 
@@ -220,7 +274,7 @@ namespace emp {
         for (auto *surface : surface_set) {
           auto &surface_body_set = surface->GetBodySet();
           for (auto *body : surface_body_set) {
-            if (body->GetEffectorRadius() > max_radius) max_radius = body->GetEffectorRadius();
+            if (body->GetRadius() > max_radius) max_radius = body->GetRadius();
           }
         }
 

@@ -53,15 +53,15 @@ const int WORLD_WIDTH = 500;
 const int WORLD_HEIGHT = 500;
 const double MAX_ORG_RADIUS = 100;         // Maximum organism radius.
 const int MIN_POP_SIZE = 4;               // Minimum population size.
-const int MAX_POP_SIZE = 200;             // Max population size.
-const int ORG_DETACH_ON_BIRTH = true;     // Should offspring remain linked after birth?
+const int MAX_POP_SIZE = 50;             // Max population size.
+const int ORG_DETACH_ON_BIRTH = false;     // Should offspring remain linked after birth?
 const int MAX_RESOURCE_AGE = 1000;        // Max allowed age for resources.
-const int MAX_RESOURCE_COUNT = 5;         // Max number of resources that can exist in the world.
-const double COST_OF_REPRODUCTION = 100;  // How much energy is necessary for an organism to reproduce?
+const int MAX_RESOURCE_COUNT = 25;         // Max number of resources that can exist in the world.
+const double COST_OF_REPRODUCTION = 5;  // How much energy is necessary for an organism to reproduce?
 const double REPRO_PROB = 0.2;
 const int SEED_POP_SIZE = 4;
 const int GENOME_LENGTH = 50;
-const double MUTATION_RATE = 0.1;
+const double MUTATION_RATE = 0.01;
 
 bool OtherKey(const emp::html5::KeyboardEvent & evt)
 {
@@ -115,6 +115,8 @@ class EvoInPhysicsInterface {
       stats_view << "Update: " << web::Live([this]() { return current_update; }) << "<br>";
       stats_view << "Organism Count: " << web::Live([this]() { return world.GetSize(); }) << "<br>";
       stats_view << "Resource Count: " << web::Live([this]() { return world.popM.GetNumResources(); }) << "<br>";
+      stats_view << "Best 1-pull in population: " << web::Live([this]() { return world.popM.GetBestOnes(); }) << "<br>";
+      stats_view << "Best 0-pull in population: " << web::Live([this]() { return world.popM.GetBestZeros(); }) << "<br>";
       // Setup canvas for world visualization
       // canvas(world width, world height, name)
       world_view << web::Canvas(WORLD_WIDTH, WORLD_HEIGHT, "evo-in-physics-pt1-world") << "<br>";
@@ -147,6 +149,7 @@ class EvoInPhysicsInterface {
       for (int i = 0; i < ancestor.genome.GetSize(); i++) {
         if (random.P(0.5)) ancestor.genome[i] = !ancestor.genome[i];
       }
+      ancestor.SetColorID( ((int) (ancestor.genome.CountOnes() * 2.0)) % 360 );
       world.Insert(ancestor);
     }
 

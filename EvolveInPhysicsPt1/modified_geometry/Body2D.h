@@ -144,6 +144,7 @@ namespace emp {
     const Point<double> & GetAnchor() const { return perimeter.GetCenter(); }
     const Point<double> & GetCenter() const { return perimeter.GetCenter(); }
     double GetRadius() const { return perimeter.GetRadius(); }
+    virtual double GetEffectorRadius() { return perimeter.GetRadius(); } // TODO: Make intermediary class for ABPhysics world. Move there. Organism and resource can inherit from that. 
     double GetTargetRadius() const { return target_radius; }
 
     void SetPosition(const Point<double> & p) { perimeter.SetCenter(p); }

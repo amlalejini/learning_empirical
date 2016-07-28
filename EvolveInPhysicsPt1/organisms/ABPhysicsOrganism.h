@@ -15,9 +15,11 @@
 
 #include <iostream>
 #include <string>
+#include <algorithm>
 
 #include "tools/BitVector.h"
 #include "tools/Random.h"
+#include "tools/functions.h"
 
 #include "../modified_geometry/Body2D.h"
 
@@ -59,6 +61,36 @@ class ABPhysicsOrganism : public emp::CircleBody2D {
     double GetEnergy() const { return energy; }
     int GetNumResourcesCollected() const { return resources_collected; }
     int GetOffspringCount() const { return offspring_count; }
+    double GetEffectorRadius() {
+      /*
+        Return the largest effector radius.
+        Effector radius for organisms is a function of the number of 1s/0s in their genome.
+        Each 1/0 increases radius by some factor.
+      */
+      int ones = genome.CountOnes();
+      return std::max( { CalculateEffectorReach(ones), CalculateEffectorReach(genome.GetSize() - ones), GetRadius() } );
+    }
+
+    double GetEffectorRadius(int effector) {
+      if (effector == 1) {
+        // 1 attractor
+        return CalculateEffectorReach(genome.CountOnes());
+      } else if (effector == 0) {
+        // 0 attractor
+        return CalculateEffectorReach(genome.GetSize() - genome.CountOnes());
+      } else {
+        return GetRadius();
+      }
+    }
+
+    double CalculateEffectorReach(int effector_strength) {
+      /*
+        Convert effector strength value (here, 1/0 count in genome) into a reach value.
+        This reach value will be used to determine the effective resource eating radius for the organism.
+        TODO: allow this function to be passed into the organism.
+      */
+      return (GetRadius() + 2 * effector_strength);
+    }
 
     ABPhysicsOrganism * Reproduce(emp::Point<double> offset, emp::Random *r, double cost = 0.0, double mut_rate = 0.0) {
       /* Handles organism reproduction!

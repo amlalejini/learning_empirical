@@ -192,7 +192,7 @@ namespace emp {
         // Calculate distance between organism and resource.
         const Point<double> dist = org_body->GetCenter() - resource_body->GetCenter();
         const double sq_pair_dist = dist.SquareMagnitude();
-        const double radius_sum = org_body->GetRadius() + resource_body->GetRadius(); // This is where I would put any radius extentions for the organism.
+        const double radius_sum = org_body->GetEffectorRadius(resource_body->GetType()) + resource_body->GetRadius(); // This is where I would put any radius extentions for the organism.
         const double sq_min_dist = radius_sum * radius_sum;
 
         // If there was no collision, return false.
@@ -215,13 +215,12 @@ namespace emp {
             Required: all surfaces MUST be same width/height.
             Required: all bodies MUST be circle bodies (relying on radius function to calculate sector sizes).
         */
-
         // Find the size of the largest body to determine minimum sector size.
         double max_radius = 0.0;
         for (auto *surface : surface_set) {
           auto &surface_body_set = surface->GetBodySet();
           for (auto *body : surface_body_set) {
-            if (body->GetRadius() > max_radius) max_radius = body->GetRadius();
+            if (body->GetEffectorRadius() > max_radius) max_radius = body->GetEffectorRadius();
           }
         }
 

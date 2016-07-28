@@ -19,6 +19,7 @@
 
 #include "evo/PopulationManager.h"
 #include "tools/vector.h"
+#include "tools/random_utils.h"
 
 /////////////////////////////
 // Learning notes
@@ -58,6 +59,9 @@ class PopulationManager_ABPhysics {
     double reproduction_cost;
     double mutation_rate;
 
+    int best_ones;
+    int best_zeros;
+
   public:
     PopulationManager_ABPhysics()
       : physics(),
@@ -69,7 +73,9 @@ class PopulationManager_ABPhysics {
         drift(0.15),
         max_organism_radius(4.0),
         reproduction_cost(10.0),
-        mutation_rate(0.01)
+        mutation_rate(0.01),
+        best_ones(-1),
+        best_zeros(-1)
     {
       ;
     }
@@ -92,7 +98,8 @@ class PopulationManager_ABPhysics {
     uint32_t size() const { return physics.GetConstOrgBodySet().size(); }
     int GetSize() const { return (int) this->size(); }
     int GetNumResources() const {return (int) physics.GetConstResourceBodySet().size(); }
-
+    int GetBestOnes() const { return best_ones; }
+    int GetBestZeros() const { return best_zeros; }
     void SetRandom(Random *r) { random_ptr = r; }
 
     void Clear() { physics.Clear(); }
@@ -141,19 +148,24 @@ class PopulationManager_ABPhysics {
       auto &pop = physics.GetOrgBodySet();
       auto &resources = physics.GetResourceBodySet();
       vector<ORG *> new_organisms;
+      best_ones = -1;   // How many 1's does the best 1 org in the population have?
+      best_zeros = -1;  // How many 0's does the best 0 org in the population have?
       // Loop through all bodies to see which ones should replicate.
       for (auto *org : pop) {
         // Add a small amount of Brownian motion
-        org->IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(drift));
+        //org->IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(drift));
         // Update organism color based on energy levels! (ALERT! MAGIC NUMBER HERE)
-        org->SetColorID(((int) org->GetEnergy()) % 360);  // This should happen elsewhere, pop manager doesn't care about drawing... But for now, this is easy.
+        int num_ones = org->genome.CountOnes();
+        int num_zeros = org->genome.GetSize() - num_ones;
+        if (num_ones > best_ones) best_ones = num_ones;
+        if (num_zeros > best_zeros) best_zeros = num_zeros;
+        org->SetColorID(((int) num_ones * 2) % 360);  // This should happen elsewhere, pop manager doesn't care about drawing... But for now, this is easy.
         // Organisms cannot reproduce if:
         //  * They are already reproducing
         //  * They are under too much pressure
         //  * They are attached to too many bodies
         if (org->IsReproducing()
-            || (org->GetPressure() > pop_pressure)
-            || (this->GetSize() >= maximum_population_size)) continue;
+            || (org->GetPressure() > pop_pressure)) continue;
 
         // Reproduction happens here.
         // If organism has enough energy, reproduce with Probability(repro_prob) || for sure reproduce if pop size is below minimum.
@@ -164,6 +176,16 @@ class PopulationManager_ABPhysics {
         }
       } // end population loop
       // Adding new bodies to world would happen here
+      // Make room in population for new organisms.
+      if ((int)(pop.size() + new_organisms.size()) > maximum_population_size) {
+        // We need to make room.
+        int needed_room = (int)(pop.size() + new_organisms.size()) - maximum_population_size;
+        int new_size = (int)pop.size() - needed_room;
+        emp::Shuffle<ORG *>(*random_ptr, pop, new_size);
+        // Delete all excess organisms, resize population.
+        for (int i = new_size; i < (int) pop.size(); ++i) delete pop[i];
+        pop.resize(new_size);
+      }
       for (auto new_organism : new_organisms) {
         AddOrg(new_organism);
       }
@@ -175,8 +197,17 @@ class PopulationManager_ABPhysics {
       // While there aren't enough resources in the environment, add more randomly
       while (GetNumResources() < resource_count) {
         emp::Point<double> res_center(random_ptr->GetDouble(10.0, physics.GetWidth() - 10.0), random_ptr->GetDouble(10.0, physics.GetHeight()));
-        RESOURCE *new_resource = new RESOURCE(emp::Circle<double>(emp::Circle<double>(res_center, 15)));
-        new_resource->SetValue(20);
+        RESOURCE *new_resource = new RESOURCE(emp::Circle<double>(emp::Circle<double>(res_center, 5)));
+        new_resource->SetValue(1);
+        if (random_ptr->P(0.5)) {
+          // 1 resource
+          new_resource->SetType(1);
+          new_resource->SetColorID(200);
+        } else {
+          // 0 resource
+          new_resource->SetType(0);
+          new_resource->SetColorID(0);
+        }
         AddResource(new_resource);
       }
     }

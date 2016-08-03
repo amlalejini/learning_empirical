@@ -159,7 +159,7 @@ class PopulationManager_ABPhysics {
         int num_zeros = org->genome.GetSize() - num_ones;
         if (num_ones > best_ones) best_ones = num_ones;
         if (num_zeros > best_zeros) best_zeros = num_zeros;
-        org->SetColorID(((int) num_ones * 2) % 360);  // This should happen elsewhere, pop manager doesn't care about drawing... But for now, this is easy.
+        org->SetColorID((int)((num_ones / (double) org->genome.GetSize()) * 200));  // This should happen elsewhere, pop manager doesn't care about drawing... But for now, this is easy.
         // Organisms cannot reproduce if:
         //  * They are already reproducing
         //  * They are under too much pressure
@@ -172,6 +172,7 @@ class PopulationManager_ABPhysics {
         if ( (org->GetEnergy() >= reproduction_cost) ) {
           emp::Angle repro_angle(random_ptr->GetDouble(2.0 * emp::PI)); // What angle should we put the offspring at?
           auto *baby_org = org->Reproduce(repro_angle.GetPoint(0.1), random_ptr, reproduction_cost, mutation_rate);
+          baby_org->SetMass(5.0);
           new_organisms.push_back(baby_org);  // Mark this baby org to be added to the world.
         }
       } // end population loop
@@ -203,10 +204,12 @@ class PopulationManager_ABPhysics {
           // 1 resource
           new_resource->SetType(1);
           new_resource->SetColorID(200);
+          new_resource->SetMass(1.0);
         } else {
           // 0 resource
           new_resource->SetType(0);
           new_resource->SetColorID(0);
+          new_resource->SetMass(1.0);
         }
         AddResource(new_resource);
       }

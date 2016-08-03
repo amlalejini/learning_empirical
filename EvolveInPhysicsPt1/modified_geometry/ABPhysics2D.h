@@ -105,18 +105,15 @@ namespace emp {
         RESOURCE_TYPE *res_body;
         ORG_TYPE *org_body;
         if ( ( res_body = dynamic_cast<RESOURCE_TYPE*>(body1) ) && ( org_body = dynamic_cast<ORG_TYPE*>(body2) ) )
-          return CollideOrgXResource(org_body, res_body);
+          return ResolveCollision_OrgXResource(org_body, res_body);
         else if ( ( res_body = dynamic_cast<RESOURCE_TYPE*>(body2) ) && ( org_body = dynamic_cast<ORG_TYPE*>(body1) ) )
-          return CollideOrgXResource(org_body, res_body);
+          return ResolveCollision_OrgXResource(org_body, res_body);
         else
-          return CollideCircles(body1, body2);
+          return ResolveCollision_CircleBodies(body1, body2);
       }
 
-      bool CollideCircles(CircleBody2D *body1, CircleBody2D *body2) {
-        /* Given two circle bodies, test for collision. If there is a collision,
-            handle the aftermath.
-           Returns true if collision happens.
-           Returns false if no collision.
+      bool ResolveCollision_CircleBodies(CircleBody2D *body1, CircleBody2D *body2) {
+        /*
         */
         if (body1->IsLinked(*body2)) return false; // Linked bodies can overlap.
 
@@ -134,8 +131,6 @@ namespace emp {
           body2->Translate(Point<double>(0.01, 0.01));
         }
 
-        // @CAO If objects can phase or explode, identify that here.
-
         // Re-adjust position to remove overlap.
         const double true_dist = sqrt(sq_pair_dist);
         const double overlap_dist = ((double) radius_sum) - true_dist;
@@ -144,43 +139,23 @@ namespace emp {
         body1->AddShift(cur_shift);   // Split the re-adjustment between the two colliding bodies.
         body2->AddShift(-cur_shift);
 
-        // @CAO if we have inelastic collisions, we just take the weighted average of velocities
-        // and let them move together.
-
-        // Assume elastic: Re-adjust velocity to reflect bounce.
-        double x1, y1, x2, y2;
-
-        if (dist.GetX() == 0) {
-          // If vertically aligned, just swap y velocities.
-          x1 = body1->GetVelocity().GetX();  y1 = body2->GetVelocity().GetY();
-          x2 = body2->GetVelocity().GetX();  y2 = body1->GetVelocity().GetY();
-
-          body1->SetVelocity(Point<double>(x1, y1));
-          body2->SetVelocity(Point<double>(x2, y2));
-        } else if (dist.GetY() == 0) {
-          // If horizontally aligned, just swap x velocities.
-          x1 = body2->GetVelocity().GetX();  y1 = body1->GetVelocity().GetY();
-          x2 = body1->GetVelocity().GetX();  y2 = body2->GetVelocity().GetY();
-
-          body1->SetVelocity(Point<double>(x1, y1));
-          body2->SetVelocity(Point<double>(x2, y2));
-        } else {
-          // General case.
-          const Point<double> rel_velocity(body2->GetVelocity() - body1->GetVelocity());
-          double normal_a = dist.GetY() / dist.GetX();
-          x1 = ( rel_velocity.GetX() + normal_a * rel_velocity.GetY() )
-            / ( normal_a * normal_a + 1 );
-          y1 = normal_a * x1;
-          x2 = rel_velocity.GetX() - x1;
-          y2 = - (1 / normal_a) * x2;
-
-          body2->SetVelocity(body1->GetVelocity() + Point<double>(x2, y2));
-          body1->SetVelocity(body1->GetVelocity() + Point<double>(x1, y1));
-        }
+        // Resolve collision using impulse resolution.
+        const double coefficient_of_restitution = 1.0;
+        const Point<double> collision_normal(dist / true_dist);
+        const Point<double> rel_velocity(body1->GetVelocity() - body2->GetVelocity());
+        const double velocity_along_normal = (rel_velocity.GetX() * collision_normal.GetX()) + (rel_velocity.GetY() * collision_normal.GetY());
+        // If velocities are separating, no need to resolve anything further, but we'll still mark it as a collision.
+        if (velocity_along_normal > 0) return true;
+        double j = -(1 + coefficient_of_restitution) * velocity_along_normal; // Calculate j, the impulse scalar.
+        j /= body1->GetInvMass() + body2->GetInvMass();
+        const Point<double> impulse(collision_normal * j);
+        // Apply the impulse.
+        body1->SetVelocity(body1->GetVelocity() + (impulse * body1->GetInvMass()));
+        body2->SetVelocity(body2->GetVelocity() - (impulse * body2->GetInvMass()));
         return true;
       }
 
-      bool CollideOrgXResource(ORG_TYPE *org_body, RESOURCE_TYPE *resource_body) {
+      bool ResolveCollision_OrgXResource(ORG_TYPE *org_body, RESOURCE_TYPE *resource_body) {
         /*
           Handles collision test for organism X resource.
           If resource is in range of organism, attempt to add link from organism to resource.
@@ -219,45 +194,27 @@ namespace emp {
             resource_body->Translate(Point<double>(0.01, 0.01));
           }
 
-          // @CAO If objects can phase or explode, identify that here.
-
           // Re-adjust position to remove overlap.
+          const double true_dist = sqrt(sq_pair_dist);
           const double overlap_dist = ((double) radius_sum) - true_dist;
           const double overlap_frac = overlap_dist / true_dist;
           const Point<double> cur_shift = dist * (overlap_frac / 2.0);
           org_body->AddShift(cur_shift);   // Split the re-adjustment between the two colliding bodies.
           resource_body->AddShift(-cur_shift);
 
-          // @CAO if we have inelastic collisions, we just take the weighted average of velocities
-          // and let them move together.
-          double x1, y1, x2, y2;
-          if (dist.GetX() == 0) {
-            // If vertically aligned, just swap y velocities.
-            x1 = org_body->GetVelocity().GetX();  y1 = resource_body->GetVelocity().GetY();
-            x2 = resource_body->GetVelocity().GetX();  y2 = org_body->GetVelocity().GetY();
-
-            org_body->SetVelocity(Point<double>(x1, y1));
-            resource_body->SetVelocity(Point<double>(x2, y2));
-          } else if (dist.GetY() == 0) {
-            // If horizontally aligned, just swap x velocities.
-            x1 = resource_body->GetVelocity().GetX();  y1 = org_body->GetVelocity().GetY();
-            x2 = org_body->GetVelocity().GetX();  y2 = resource_body->GetVelocity().GetY();
-
-            org_body->SetVelocity(Point<double>(x1, y1));
-            resource_body->SetVelocity(Point<double>(x2, y2));
-          } else {
-            // General case.
-            const Point<double> rel_velocity(resource_body->GetVelocity() - org_body->GetVelocity());
-            double normal_a = dist.GetY() / dist.GetX();
-            x1 = ( rel_velocity.GetX() + normal_a * rel_velocity.GetY() )
-              / ( normal_a * normal_a + 1 );
-            y1 = normal_a * x1;
-            x2 = rel_velocity.GetX() - x1;
-            y2 = - (1 / normal_a) * x2;
-
-            resource_body->SetVelocity(org_body->GetVelocity() + Point<double>(x2, y2));
-            org_body->SetVelocity(org_body->GetVelocity() + Point<double>(x1, y1));
-          }
+          // Resolve collision using impulse resolution.
+          const double coefficient_of_restitution = 1.0;
+          const Point<double> collision_normal(dist / true_dist);
+          const Point<double> rel_velocity(org_body->GetVelocity() - resource_body->GetVelocity());
+          const double velocity_along_normal = (rel_velocity.GetX() * collision_normal.GetX()) + (rel_velocity.GetY() * collision_normal.GetY());
+          // If velocities are separating, no need to resolve anything further, but we'll still mark it as a collision.
+          if (velocity_along_normal > 0) return true;
+          double j = -(1 + coefficient_of_restitution) * velocity_along_normal; // Calculate j, the impulse scalar.
+          j /= org_body->GetInvMass() + resource_body->GetInvMass();
+          const Point<double> impulse(collision_normal * j);
+          // Apply the impulse.
+          org_body->SetVelocity(org_body->GetVelocity() + (impulse * org_body->GetInvMass()));
+          resource_body->SetVelocity(resource_body->GetVelocity() - (impulse * resource_body->GetInvMass()));
         }
         return true;
       }

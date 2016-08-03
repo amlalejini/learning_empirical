@@ -48,19 +48,19 @@ namespace web {
 namespace web = emp::web;
 
 // For now, use these parameters.
-const int RANDOM_SEED = 101;
-const int WORLD_WIDTH = 500;
-const int WORLD_HEIGHT = 500;
+const int RANDOM_SEED = 102;
+const int WORLD_WIDTH = 1500;
+const int WORLD_HEIGHT = 1000;
 const double MAX_ORG_RADIUS = 100;         // Maximum organism radius.
 const int MIN_POP_SIZE = 4;               // Minimum population size.
-const int MAX_POP_SIZE = 150;             // Max population size.
+const int MAX_POP_SIZE = 1000;             // Max population size.
 const int ORG_DETACH_ON_BIRTH = true;     // Should offspring remain linked after birth?
-const int MAX_RESOURCE_AGE = 50000;        // Max allowed age for resources.
-const int MAX_RESOURCE_COUNT = 25;         // Max number of resources that can exist in the world.
+const int MAX_RESOURCE_AGE = 10000;        // Max allowed age for resources.
+const int MAX_RESOURCE_COUNT = 250;         // Max number of resources that can exist in the world.
 const double COST_OF_REPRODUCTION = 5;  // How much energy is necessary for an organism to reproduce?
 const double REPRO_PROB = 0.2;
 const int SEED_POP_SIZE = 4;
-const int GENOME_LENGTH = 50;
+const int GENOME_LENGTH = 1;
 const double MUTATION_RATE = 0.01;
 
 bool OtherKey(const emp::html5::KeyboardEvent & evt)
@@ -150,6 +150,7 @@ class EvoInPhysicsInterface {
         if (random.P(0.5)) ancestor.genome[i] = !ancestor.genome[i];
       }
       ancestor.SetColorID( ((int) (ancestor.genome.CountOnes() * 2.0)) % 360 );
+      ancestor.SetMass(15.0);
       world.Insert(ancestor);
     }
 

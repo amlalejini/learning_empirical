@@ -66,6 +66,7 @@ namespace emp {
     Angle orientation;        // Which way is body facing?
     Point<double> velocity;   // Speed and direction of movement
     double mass;              // "Weight" of this object (@CAO not used yet..)
+    double inv_mass;          // Inverse mass on this object (often useful to have precalculated)
     uint32_t color_id;        // Which color should this body appear?
     int repro_count;          // Number of offspring currently being produced.
 
@@ -75,19 +76,19 @@ namespace emp {
     double pressure;                // Current pressure on this body.
 
   public:
-    Body2D_Base() : birth_time(0.0), mass(1.0), color_id(0), repro_count(0), pressure(0) { ; }
+    Body2D_Base() : birth_time(0.0), mass(1.0), inv_mass(1 / mass), color_id(0), repro_count(0), pressure(0) { ; }
     ~Body2D_Base() { ; }
 
     double GetBirthTime() const { return birth_time; }
     const Angle & GetOrientation() const { return orientation; }
     const Point<double> & GetVelocity() const { return velocity; }
     double GetMass() const { return mass; }
+    double GetInvMass() const { return inv_mass; }
     uint32_t GetColorID() const { return color_id; }
     bool IsReproducing() const { return repro_count; }
     int GetReproCount() const { return repro_count; }
     Point<double> GetShift() const { return shift; }
     double GetPressure() const { return pressure; }
-
 
     void SetBirthTime(double in_time) { birth_time = in_time; }
     void SetColorID(uint32_t in_id) { color_id = in_id; }
@@ -102,6 +103,11 @@ namespace emp {
     void DecSpeed() { velocity -= orientation.GetPoint<double>(); }
     void SetVelocity(double x, double y) { velocity.Set(x, y); }
     void SetVelocity(const Point<double> & v) { velocity = v; }
+    void SetMass(double m) {
+      mass = m;
+      if (mass == 0.0) inv_mass = 0.0;
+      else inv_mass = 1.0 / mass;
+    }
 
     // Shift to apply next update.
     void AddShift(const Point<double> & s) { shift += s; total_abs_shift += s.Abs(); }
@@ -128,7 +134,7 @@ namespace emp {
     }
 
   public:
-    CircleBody2D(const Circle<double> & _p)
+    CircleBody2D(const Circle<double> & _p, double mass = 1.0)
       : perimeter(_p), target_radius(_p.GetRadius())
     {
       //EMP_TRACK_CONSTRUCT(CircleBody2D);
@@ -173,7 +179,6 @@ namespace emp {
       from_links.push_back(new_link);
       link_org.to_links.push_back(new_link);
     }
-
 
     void RemoveLink(BodyLink<CircleBody2D> * link) {
       if (link->to == this) {
@@ -265,7 +270,6 @@ namespace emp {
 
     }
 
-
     // Move this body by its velocity and reduce velocity based on friction.
     void ProcessStep(double friction=0) {
       if (velocity.NonZero()) {
@@ -279,7 +283,6 @@ namespace emp {
         else { velocity *= 1.0 - ((double) friction) / ((double) velocity_mag); }
       }
     }
-
 
     // Determine where the circle will end up and force it to be within a bounding box.
     void FinalizePosition(const Point<double> & max_coords) {

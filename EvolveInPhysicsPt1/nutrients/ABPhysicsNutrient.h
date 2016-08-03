@@ -28,7 +28,7 @@ class ABPhysicsNutrient : public emp::CircleBody2D {
         type(nutrient_type),
         value(nutrient_value),
         age(0)
-    { this->color_id = 200; }
+    { ; }
 
     ~ABPhysicsNutrient() { ; }
     // accessors

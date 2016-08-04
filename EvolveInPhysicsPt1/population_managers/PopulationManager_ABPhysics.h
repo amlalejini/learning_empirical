@@ -47,17 +47,16 @@ class PopulationManager_ABPhysics {
     ABPhysics2D<ORG, RESOURCE> physics;
 
     Random *random_ptr;
-    // TODO: pull these in from outside pop manager
-    const double pop_pressure = 1.0;
-    int minimum_population_size;
-    int maximum_population_size;
-    int resource_count;
+
+    int max_pop_size;
+    double point_mutation_rate;
+    double max_org_radius;
     int max_resource_age;
-    double reproduction_prob;
+    int max_resource_count;
+    double cost_of_reproduction;
+    double resource_energy_content;
+
     double drift;
-    double max_organism_radius;
-    double reproduction_cost;
-    double mutation_rate;
 
     int best_ones;
     int best_zeros;
@@ -65,15 +64,14 @@ class PopulationManager_ABPhysics {
   public:
     PopulationManager_ABPhysics()
       : physics(),
-        minimum_population_size(1),
-        maximum_population_size(100),
-        resource_count(0),
-        max_resource_age(100),
-        reproduction_prob(0.003),
+        max_pop_size(1),
+        point_mutation_rate(0.001),
+        max_org_radius(10.0),
+        max_resource_age(1),
+        max_resource_count(1),
+        cost_of_reproduction(1.0),
+        resource_energy_content(1.0),
         drift(0.15),
-        max_organism_radius(4.0),
-        reproduction_cost(10.0),
-        mutation_rate(0.01),
         best_ones(-1),
         best_zeros(-1)
     {
@@ -100,11 +98,11 @@ class PopulationManager_ABPhysics {
     int GetNumResources() const {return (int) physics.GetConstResourceBodySet().size(); }
     int GetBestOnes() const { return best_ones; }
     int GetBestZeros() const { return best_zeros; }
-    void SetRandom(Random *r) { random_ptr = r; }
+    void Setup(Random *r) { random_ptr = r; }
 
     void Clear() { physics.Clear(); }
 
-    void ConfigPop(double width, double height, double max_org_radius = 20, bool detach = true, int min_pop_size = 1, int max_pop_size = 100, int res_cnt = 0, int max_res_age = 10, double repro_cost = 10.0, double repro_prob = 0.003, double mut_rate = 0.01) {
+    void ConfigPop(double width, double height, int max_pop_size = 10, double max_org_radius = 10, double detach_on_birth = true, double point_mutation_rate = 0.001, double reproduction_cost = 1.0, int max_resource_count = 0, int max_resource_age = 1.0, double resource_energy_content = 1.0) {
       /*
         Configure the population manager (and the underlying physics) given the following parameters:
           * width: width of physics world (in world units)
@@ -113,16 +111,15 @@ class PopulationManager_ABPhysics {
           * detach: should organisms be attached or detached to parent at birth?
       */
       // Configure population-specific variables
-      minimum_population_size = min_pop_size;
-      maximum_population_size = max_pop_size;
-      resource_count = res_cnt;
-      max_resource_age = max_res_age;
-      max_organism_radius = max_org_radius;
-      reproduction_cost = repro_cost;
-      reproduction_prob = repro_prob;
-      mutation_rate = mut_rate;
+      this->max_pop_size = max_pop_size;
+      this->max_org_radius = max_org_radius;
+      this->point_mutation_rate = point_mutation_rate;
+      this->cost_of_reproduction = reproduction_cost;
+      this->resource_energy_content = resource_energy_content;
+      this->max_resource_age = max_resource_age;
+      this->max_resource_count = max_resource_count;
       // Configure the physics
-      physics.ConfigPhysics(width, height, random_ptr, max_organism_radius, detach, max_resource_age);
+      physics.ConfigPhysics(width, height, random_ptr, max_org_radius, detach_on_birth, max_resource_age);
     }
 
     ABPhysics2D<ORG, RESOURCE> & GetPhysics() { return physics; }
@@ -163,24 +160,23 @@ class PopulationManager_ABPhysics {
         // Organisms cannot reproduce if:
         //  * They are already reproducing
         //  * They are under too much pressure
-        //  * They are attached to too many bodies
         if (org->IsReproducing()
-            || (org->GetPressure() > pop_pressure)) continue;
+            || (org->GetPressure() > org->GetPopPressureThreshold())) continue;
 
         // Reproduction happens here.
-        // If organism has enough energy, reproduce with Probability(repro_prob) || for sure reproduce if pop size is below minimum.
-        if ( (org->GetEnergy() >= reproduction_cost) ) {
+        // If organism has enough energy, reproduce!
+        if (org->GetEnergy() >= cost_of_reproduction) {
           emp::Angle repro_angle(random_ptr->GetDouble(2.0 * emp::PI)); // What angle should we put the offspring at?
-          auto *baby_org = org->Reproduce(repro_angle.GetPoint(0.1), random_ptr, reproduction_cost, mutation_rate);
-          baby_org->SetMass(5.0);
+          auto *baby_org = org->Reproduce(repro_angle.GetPoint(0.1), random_ptr, cost_of_reproduction, point_mutation_rate);
+          baby_org->SetMass(15.0);
           new_organisms.push_back(baby_org);  // Mark this baby org to be added to the world.
         }
       } // end population loop
       // Adding new bodies to world would happen here
       // Make room in population for new organisms.
-      if ((int)(pop.size() + new_organisms.size()) > maximum_population_size) {
+      if ((int)(pop.size() + new_organisms.size()) > max_pop_size) {
         // We need to make room.
-        int needed_room = (int)(pop.size() + new_organisms.size()) - maximum_population_size;
+        int needed_room = (int)(pop.size() + new_organisms.size()) - max_pop_size;
         int new_size = (int)pop.size() - needed_room;
         emp::Shuffle<ORG *>(*random_ptr, pop, new_size);
         // Delete all excess organisms, resize population.
@@ -192,14 +188,15 @@ class PopulationManager_ABPhysics {
       }
 
       // Move the resources round (TODO: surface should define flow force matrix -- precalculated static forces for each location)
+      // TODO: move resource removal here? -- Physics doesn't really need to handle that? Or keep in physics?
       for (auto *res : resources) {
         res->IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(drift * 0.5));  // Some brownian motion for resources
       }
       // While there aren't enough resources in the environment, add more randomly
-      while (GetNumResources() < resource_count) {
+      while (GetNumResources() < max_resource_count) {
         emp::Point<double> res_center(random_ptr->GetDouble(10.0, physics.GetWidth() - 10.0), random_ptr->GetDouble(10.0, physics.GetHeight()));
         RESOURCE *new_resource = new RESOURCE(emp::Circle<double>(emp::Circle<double>(res_center, 5)));
-        new_resource->SetValue(1);
+        new_resource->SetValue(resource_energy_content);
         if (random_ptr->P(0.5)) {
           // 1 resource
           new_resource->SetType(1);

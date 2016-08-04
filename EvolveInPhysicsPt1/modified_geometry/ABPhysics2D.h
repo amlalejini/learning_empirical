@@ -318,9 +318,9 @@ namespace emp {
         while (cur_id < cur_size) {
           emp_assert(org_body_set[cur_id] != nullptr);
           const double cur_pressure = org_body_set[cur_id]->GetPressure();
-
+          const double pop_pressure = org_body_set[cur_id]->GetPopPressureThreshold();
           // @CAO Arbitrary pressure threshold!
-          if (cur_pressure > 3.0) {                 // If pressure too high, burst this cell!
+          if (cur_pressure > pop_pressure) {                 // If pressure too high, burst this cell!
             delete org_body_set[cur_id];                // Delete the burst cell.
             cur_size--;                             // Indicate one fewer cells in population.
             org_body_set[cur_id] = org_body_set[cur_size];  // Move last cell to popped position.

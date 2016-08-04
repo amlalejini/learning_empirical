@@ -32,6 +32,7 @@ class ABPhysicsOrganism : public emp::CircleBody2D {
     using emp::CircleBody2D::to_links;
     double energy;
     int resources_collected;
+    double pop_pressure_threshold;
 
   public:
     emp::BitVector genome;
@@ -41,6 +42,7 @@ class ABPhysicsOrganism : public emp::CircleBody2D {
         offspring_count(0),
         energy(0),
         resources_collected(0),
+        pop_pressure_threshold(1.0),
         genome(genome_length, false)
     {
       ;
@@ -51,6 +53,7 @@ class ABPhysicsOrganism : public emp::CircleBody2D {
         offspring_count(0),
         energy(0),
         resources_collected(0),
+        pop_pressure_threshold(parent->GetPopPressureThreshold()),
         genome(parent->genome)
     {
       ;
@@ -61,6 +64,7 @@ class ABPhysicsOrganism : public emp::CircleBody2D {
     double GetEnergy() const { return energy; }
     int GetNumResourcesCollected() const { return resources_collected; }
     int GetOffspringCount() const { return offspring_count; }
+    double GetPopPressureThreshold() const { return pop_pressure_threshold; }
 
     double GetResourceConsumptionProb(ABPhysicsNutrient &resource) {
       /* Given a resource, what is the probability that this organism can consume it? */
@@ -74,6 +78,7 @@ class ABPhysicsOrganism : public emp::CircleBody2D {
       }
     }
 
+    void SetPopPressureThreshold(double thresh) { pop_pressure_threshold = thresh; }
 
     ABPhysicsOrganism * Reproduce(emp::Point<double> offset, emp::Random *r, double cost = 0.0, double mut_rate = 0.0) {
       /* Handles organism reproduction!

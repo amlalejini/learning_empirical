@@ -29,7 +29,7 @@
 //  * Functionality required of Physics2D environment:
 //    - Collision testing
 //    - Update
-//    - needs to maintain a Surface of bodies (organisms/[nutrients eventually])
+//    - Maintains set of surfaces. Each surface for a different type of physics body in the environment.
 /////////////////////////////
 // TODO:
 // -- Assert that organism is a physics body

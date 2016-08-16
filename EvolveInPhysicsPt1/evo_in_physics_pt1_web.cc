@@ -9,6 +9,7 @@
 */
 
 #include "population_managers/PopulationManager_ABPhysics.h"
+#include "population_managers/PopulationManager_TubeSettler.h"
 #include "organisms/ABPhysicsOrganism.h"
 
 #include "web/Document.h"
@@ -73,6 +74,7 @@ EMP_BUILD_CONFIG(EvoInPhysicsPt1Config,
 class EvoInPhysicsInterface {
   private:
     using PhysicsWorld = emp::evo::World<ABPhysicsOrganism, emp::evo::PopulationManager_ABPhysics<ABPhysicsOrganism>>;
+    using TubeSettlerWorld = emp::evo::World<ABPhysicsOrganism, emp::evo::PopulationManager_TubeSettler<ABPhysicsOrganism>>;
     emp::Random *random;
     PhysicsWorld *world;
     web::Document dashboard;
@@ -188,7 +190,7 @@ class EvoInPhysicsInterface {
       world->Clear();
       // Initialize the population.
       // - Get mid-point of world->
-      const emp::Point<double> mid_point(world_width / 2.0, world_height / 2.0);
+      const emp::Point<double> mid_point(world_width / 2.0, 0);
       int org_radius = max_org_radius;
       // - Insert ancestor seeds into population.
       ABPhysicsOrganism ancestor = ABPhysicsOrganism(emp::Circle<double>(mid_point, org_radius), genome_length, true);

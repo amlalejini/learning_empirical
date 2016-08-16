@@ -295,8 +295,8 @@ namespace emp {
         auto &org_body_set = org_surface->GetBodySet();
         auto &resource_body_set = resource_surface->GetBodySet();
         // Update organism bodies
-        for (auto *cur_body : org_body_set) {
-          cur_body->BodyUpdate(0.25);                     // Let a body change size or shape, as needed
+        for (auto *cur_body : org_body_set) {    
+          cur_body->BodyUpdate(0.25, detach_on_birth);                     // Let a body change size or shape, as needed
           cur_body->ProcessStep(0.00125);                 // Update position and velocity. (0.00125 -> friction)
         }
         // Update resource bodies

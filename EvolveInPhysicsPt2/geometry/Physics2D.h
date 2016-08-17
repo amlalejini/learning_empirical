@@ -54,21 +54,23 @@ namespace emp {
 
       const OrgSurface_t & GetOrgSurface() const { emp_assert(configured); return *org_surface; }
       const ResourceSurface_t & GetResourceSurface() const { emp_assert(configured); return *resource_surface; }
-      const emp::vector<Surface2D<Body_t> *> & GetSurfaceSet() const { return surface_set; }
+      const emp::vector<Surface2D<BODY_TYPE> *> & GetSurfaceSet() const { return surface_set; }
 
       bool GetWidth() const { emp_assert(configured); return max_pos->GetX(); }
       bool GetHeight() const { emp_assert(configured); return max_pos->GetY(); }
 
       SimplePhysics2D & Clear() {
-        emp_assert(configured);
-        org_surface->Clear();
-        resource_surface->Clear();
+        if (configured) {
+          org_surface->Clear();
+          resource_surface->Clear();
+        }
         return *this;
       }
 
       // Configure physics. This must be called if default constructor was
       // used when creating this.
       void ConfigPhysics(double width, double height, emp::Random *r, double surface_friction) {
+        // TODO: make friendly to be called if already configured (clean up old surfaces, max_pos)
         org_surface = new OrgSurface_t(width, height, surface_friction);
         resource_surface = new ResourceSurface_t(width, height, surface_friction);
         surface_set.push_back( (OrgSurface_t *) org_surface);
@@ -78,15 +80,15 @@ namespace emp {
         configured = true;
       }
 
-      SimplePhysics2D & AddOrg(BODY_TYPE *in_org) {
-        emp_assert(configured && (in_org->GetBody()->GetBodyLabel() == BODY_LABEL::ORGANISM));
-        org_surface->AddBody(in_org);
+      SimplePhysics2D & AddOrgBody(BODY_TYPE *in_body) {
+        emp_assert(configured && (in_body->GetBodyLabel() == BODY_LABEL::ORGANISM));
+        org_surface->AddBody(in_body);
         return *this;
       }
 
-      SimplePhysics2D & AddResource(BODY_TYPE *in_resource) {
-        emp_assert(configured && (in_resource->GetBody()->GetBodyLabel() == BODY_LABEL::RESOURCE));
-        resource_surface->AddBody(in_resource);
+      SimplePhysics2D & AddResourceBody(BODY_TYPE *in_body) {
+        emp_assert(configured && (in_body->GetBodyLabel() == BODY_LABEL::RESOURCE));
+        resource_surface->AddBody(in_body);
         return *this;
       }
 
@@ -96,20 +98,6 @@ namespace emp {
         return false;
       }
 
-      // bool ResolveCollision(Body_t *body1, Body_t *body2) {
-      //   emp_assert(configured);
-      //   return false;
-      // }
-      //
-      // bool ResolveCollision(ORG_TYPE *org_body, RESOURCE_TYPE *resource_body) {
-      //   emp_assert(configured);
-      //   return false;
-      // }
-
-      // Test all possible collisions between bodies managed by physics (stored
-      // in surface_set).
-      //  REQUIREMENT: all surfaces must be same width/height.
-      //  REQUIREMENT: assumes Body_t = CircleBody2D
       void TestCollisions() {
         emp_assert(configured);
         std::cout << "Test For Collisions." << std::endl;
@@ -130,6 +118,7 @@ namespace emp {
         for (auto *cur_body : resource_body_set) {
           cur_body->BodyUpdate(f);
         }
+
         // Test for collisions.
         TestCollisions();
 

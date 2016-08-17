@@ -31,7 +31,7 @@ class SimpleOrganism {
     {
       body = new Body(_p);
       body->SetDetachOnRepro(detach_on_birth);
-      body->SetBodyLabel(BODY_LABEL::ORGANISM);
+      body->SetBodyLabel(emp::BODY_LABEL::ORGANISM);
     }
 
     SimpleOrganism(SimpleOrganism *other)
@@ -40,26 +40,29 @@ class SimpleOrganism {
          pressure_threshold(other->GetPressureThreshold()),
          genome(other->genome)
     {
-      body = new Body(other->GetBody()->GetPerimeter());
+      body = new Body(other->GetBody().GetPerimeter());
       body->SetDetachOnRepro(other->GetDetachOnBirth());
-      body->SetBodyLabel(BODY_LABEL::ORGANISM);
+      body->SetBodyLabel(emp::BODY_LABEL::ORGANISM);
     }
 
-    ~SimpleOrganism() { delete body; }
+    ~SimpleOrganism() {
+      if (body != nullptr) delete body;
+    }
 
     int GetOffspringCount() const { return offspring_count; }
     double GetBirthTime() const { return birth_time; }
-    bool GetDetachOnBirth() const { return body->GetDetachOnRepro(); }
+    bool GetDetachOnBirth() const { emp_assert(body); return body->GetDetachOnRepro(); }
     double GetPressureThreshold() const { return pressure_threshold; }
-    Body * GetBody() { return body; }
+    Body * GetBodyPtr() { return body; }
+    Body & GetBody() { emp_assert(body); return *body; }
 
-    void SetDetachOnBirth(bool detach) { body->SetDetachOnRepro(detach); }
+    void SetDetachOnBirth(bool detach) { emp_assert(body); body->SetDetachOnRepro(detach); }
 
     SimpleOrganism * Reproduce(emp::Random *r) {
       // TODO: Energy costs?
       // Build offspring
       // - TODO: assert not on top of parent
-      auto *offspring = SimpleOrganism(this);
+      auto *offspring = new SimpleOrganism(this);
       // - TODO: translate given offsiet
       // TODO: Mutate offspring
       // TODO: Link offspring
@@ -90,6 +93,6 @@ class SimpleOrganism {
     bool operator<=(const SimpleOrganism &other) const {
       return !this->operator>(other);
     }
-}
+};
 
 #endif

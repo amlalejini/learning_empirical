@@ -20,9 +20,14 @@
 #include "emtools/emfunctions.h"
 
 #include "tools/Random.h"
-
-#include "geometry/Point2D.h"
 #include "tools/vector.h"
+
+#include "evo/world.h"
+
+#include "./geometry/Point2D.h"
+#include "organisms/SimpleOrganism.h"
+#include "population-managers/PopulationManager_SimplePhysics.h"
+
 
 namespace web = emp::web;
 
@@ -45,7 +50,11 @@ const double DEFAULT_POINT_MUTATION_RATE = 0.01;
 
 class EvoInPhysicsInterface {
   private:
+    // Aliases
+    using SimplePhysicsWorld = emp::evo::World<SimpleOrganism, emp::evo::PopulationManager_SimplePhysics<SimpleOrganism> >;
+
     emp::Random *random;
+    SimplePhysicsWorld *world;
     // Interface-specific objects.
     //  - Exp run views.
     web::Document dashboard;      // Visible during exp page mode.
@@ -86,6 +95,7 @@ class EvoInPhysicsInterface {
 
       // Required setup.
       random = new emp::Random(random_seed);
+      world = new SimplePhysicsWorld(random, "simple-world");
 
       // Setup page
       // - Setup EXPERIMENT RUN mode view. -
@@ -132,6 +142,8 @@ class EvoInPhysicsInterface {
       // Configure page view.
       UpdatePageView();
 
+      if (page_mode == PageMode::EXPERIMENT) InitializeExperiment();
+
       // -----------------
       // Here's where I'll test some things.
       // emp::vector<emp::Point<double> *> body_set;
@@ -148,6 +160,10 @@ class EvoInPhysicsInterface {
       // }
 
       // -----------------
+    }
+
+    ~EvoInPhysicsInterface() {
+      delete world;
     }
 
     template<typename FieldType>
@@ -168,6 +184,13 @@ class EvoInPhysicsInterface {
         param_html << "<input type=\"number\" class=\"form-control\" placeholder=\"" << default_value << "\"aria-describedby=\"" << field_id << "-addon\" id=\"" << field_id << "-param\">";
       param_html << "</div>";
       return param_html.str();
+    }
+
+    // Call to initialize a new experiment with current config values.
+    void InitializeExperiment() {
+      // Configure new experiment.
+      //world->ConfigPop
+      // Run a reset
     }
 
     void Animate(const web::Animate &anim) {
@@ -193,19 +216,22 @@ class EvoInPhysicsInterface {
       return true;
     }
 
-    bool DoRunExperiment() {
-      /* Called after experiment configuration. */
-      std::cout << "Do Run Experiment!" << std::endl;
-      // Collect parameter values.
-      // @amlalejini: What is the best way to be collecting parameter values?
+    // Update parameter values from webpage using javascript.
+    void UpdateParams() {
+      // @amlalejini QUESTION: What is the best way to be collecting parameter values?
+      // TODO: clean parameters (clip to max/min values, etc).
       random_seed = EM_ASM_INT_V({ return $("#random-seed-param").val(); });
       world_width = EM_ASM_INT_V({ return $("#world-width-param").val(); });
       world_height = EM_ASM_INT_V({ return $("#world-height-param").val(); });
       genome_length = EM_ASM_INT_V({ return $("#genome-length-param").val(); });
       point_mutation_rate = EM_ASM_INT_V({ return $("#point-mutation-rate-param").val(); });
-      // TODO: clean parameters (clip to max/min values, etc).
-      //                     ------------
-      // Set page mode to EXPERIMENT.
+    }
+
+    bool DoRunExperiment() {
+      std::cout << "Do Run Experiment!" << std::endl;
+      // Collect parameter values.
+      UpdateParams();
+      // Update page
       page_mode = PageMode::EXPERIMENT;
       UpdatePageView();
       return true;

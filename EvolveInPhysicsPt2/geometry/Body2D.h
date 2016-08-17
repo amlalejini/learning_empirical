@@ -108,8 +108,8 @@ namespace emp {
     void SetBodyLabel(BODY_LABEL label) { body_label = label; }
 
     // Orientation control...
-    void TurnLeft(int steps=1) { orientation.RotateDegrees(steps * 45); }
-    void TurnRight(int steps=1) { orientation.RotateDegrees(step * -45); }
+    void TurnLeft(int steps = 1) { orientation.RotateDegrees(steps * 45); }
+    void TurnRight(int steps = 1) { orientation.RotateDegrees(steps * -45); }
 
     // Velocity control...
     void IncSpeed(const Point<double> & offset) { velocity += offset; }

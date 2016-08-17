@@ -39,22 +39,25 @@ namespace emp {
   private:
     const Point<double> max_pos;        // Lower-left corner of the surface.
     emp::vector<BODY_TYPE *> body_set;  // Set of all bodies on surface
-
+    double friction;
   public:
-    Surface2D(double _width, double _height)
-      : max_pos(_width, _height)
-    {
-    }
+    Surface2D(double _width, double _height, double surface_friction = 0.00125)
+      : max_pos(_width, _height),
+        friction(surface_friction)
+    { ; }
     ~Surface2D() { Clear(); }
 
     double GetWidth() const { return max_pos.GetX(); }
     double GetHeight() const { return max_pos.GetY(); }
+    double GetFriction() const { return friction; }
     const Point<double> & GetMaxPosition() const { return max_pos; }
 
     BODY_TYPE & operator[](int i) { return body_set[i]; }
 
     std::vector<BODY_TYPE *> & GetBodySet() { return body_set; }
     const std::vector<BODY_TYPE *> & GetConstBodySet() const { return body_set; }
+
+    void SetFriction(double friction) { this->friction = friction; }
 
     // Add a single body.  Surface now controls this body and must delete it.
     Surface2D & AddBody(BODY_TYPE * new_body) {

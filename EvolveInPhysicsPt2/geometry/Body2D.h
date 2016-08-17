@@ -18,6 +18,8 @@
 //  * If we are going to have a lot of links, we may want a better data structure than vector.
 //    (if we don't have a lot, vector may be the best choice...)
 
+// TODO: Review how BodyUpdate and FinalizePosition are organized.
+
 #ifndef EMP_BODY_2D_H
 #define EMP_BODY_2D_H
 
@@ -34,6 +36,9 @@
 #include <string>
 
 namespace emp {
+
+  // QUESTION: how can I make this extensible for the future? Macro magic or something?
+  enum class BODY_LABEL { DEFAULT, ORGANISM, RESOURCE };
 
   class Body2D_Base {
   protected:
@@ -62,6 +67,7 @@ namespace emp {
       ~BodyLink() { ; }
     };
 
+    BODY_LABEL body_label;
     double birth_time;        // At what time point was this organism born?
     Angle orientation;        // Which way is body facing?
     Point<double> velocity;   // Speed and direction of movement
@@ -70,6 +76,7 @@ namespace emp {
     uint32_t color_id;        // Which color should this body appear?
     int repro_count;          // Number of offspring currently being produced.
     bool detach_on_repro;     // Should body detach when link type is REPRODUCTION?
+    double growth_rate;       // Default rate (growth per update) at which body will grow if not at target size.
 
     Point<double> shift;            // How should this body be updated to minimize overlap.
     Point<double> cum_shift;        // Build up of shift not yet acted upon.
@@ -77,7 +84,7 @@ namespace emp {
     double pressure;                // Current pressure on this body.
 
   public:
-    Body2D_Base() : birth_time(0.0), mass(1.0), inv_mass(1 / mass), color_id(0), repro_count(0), detach_on_repro(true), pressure(0) { ; }
+    Body2D_Base() : body_label(BODY_LABEL::DEFAULT), birth_time(0.0), mass(1.0), inv_mass(1 / mass), color_id(0), repro_count(0), detach_on_repro(true), growth_rate(1.0), pressure(0) { ; }
     ~Body2D_Base() { ; }
 
     double GetBirthTime() const { return birth_time; }
@@ -91,10 +98,14 @@ namespace emp {
     bool GetDetachOnRepro() const { return detach_on_repro; }
     Point<double> GetShift() const { return shift; }
     double GetPressure() const { return pressure; }
+    double GetGrowthRate() const { return growth_rate; }
+    BODY_LABEL GetBodyLabel() const { return body_label; }
 
     void SetBirthTime(double in_time) { birth_time = in_time; }
     void SetDetachOnRepro(bool detach) { detach_on_repro = detach; }
+    void SetGrowthRate(double rate) { growth_rate = rate; }
     void SetColorID(uint32_t in_id) { color_id = in_id; }
+    void SetBodyLabel(BODY_LABEL label) { body_label = label; }
 
     // Orientation control...
     void TurnLeft(int steps=1) { orientation.RotateDegrees(steps * 45); }
@@ -241,8 +252,15 @@ namespace emp {
       return offspring;
     }
 
-    // If a body is not at its target radius, grow it or shrink it, as needed.
-    void BodyUpdate(double change_factor = 1) {
+    // See BodyUpdate(double, double).
+    void BodyUpdate(double friction = 0.0) {
+      this->BodyUpdate(friction, growth_rate);
+    }
+
+    // * If a body is not at its target radius, grow it or shrink it, as needed.
+    // * Move body by its velocity.
+    // * Reduce velocity by based on friction.
+    void BodyUpdate(double friction = 0.0, double change_factor = 1.0) {
       // Test if this body needs to grow or shrink.
       if ((int) target_radius > (int) GetRadius()) SetRadius(GetRadius() + change_factor);
       else if ((int) target_radius < (int) GetRadius()) SetRadius(GetRadius() - change_factor);
@@ -269,15 +287,8 @@ namespace emp {
           else link->cur_dist -= change_factor;
         }
       }
-    }
 
-    // TODO: add growth rate
-    void BodyUpdate() {
-      this->BodyUpdate(growth_rate);
-    }
-
-    // Move this body by its velocity and reduce velocity based on friction.
-    void ProcessStep(double friction=0) {
+      // Move body by its velocity and reduce velocity based on friction.
       if (velocity.NonZero()) {
         perimeter.Translate(velocity);
         const double velocity_mag = velocity.Magnitude();
@@ -350,7 +361,6 @@ namespace emp {
         emp_assert(link->cur_dist >= 0);          // Distances cannot be negative.
         emp_assert(link->target_dist >= 0);       // Distances cannot be negative.
       }
-
       return true;
     }
 

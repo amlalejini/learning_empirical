@@ -9,7 +9,7 @@ CXX_native := g++
 
 # Other flags
 OFLAGS_native := -g -pedantic
-OFLAGS_web := -DNDEBUG -s TOTAL_MEMORY=67108864
+OFLAGS_web := -DNDEBUG -s TOTAL_MEMORY=67108864 -s ASSERTIONS=2
 
 # Bringing flag options together
 CFLAGS_native := $(CFLAGS_all)

@@ -66,11 +66,17 @@ namespace emp {
         }
         return *this;
       }
-
+      // Config needs to be able to be called multiple times..
       // Configure physics. This must be called if default constructor was
       // used when creating this.
       void ConfigPhysics(double width, double height, emp::Random *r, double surface_friction) {
-        // TODO: make friendly to be called if already configured (clean up old surfaces, max_pos)
+        if (configured) {
+          // If already configured, delete existing bits and remake them.
+          surface_set.clear();
+          delete org_surface;
+          delete resource_surface;
+          delete max_pos;
+        }
         org_surface = new OrgSurface_t(width, height, surface_friction);
         resource_surface = new ResourceSurface_t(width, height, surface_friction);
         surface_set.push_back( (OrgSurface_t *) org_surface);
@@ -105,6 +111,7 @@ namespace emp {
 
       // Progress physics by a single time step.
       void Update() {
+        std::cout << "Physics update!" << std::endl;
         emp_assert(configured);
         auto &org_body_set = org_surface->GetBodySet();
         auto &resource_body_set = resource_surface->GetBodySet();

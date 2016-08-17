@@ -128,7 +128,17 @@ class PopulationManager_SimplePhysics {
       this->resource_value = resource_value;
       this->movement_noise = movement_noise;
       // Config the physics.
-      physics.ConfigPhysics(width, height, surface_friction);
+      physics.ConfigPhysics(width, height, random_ptr, surface_friction);
+    }
+
+    // Progress time by one step.
+    void Execute() {
+      // Progress physics.
+      physics.Update();
+      // Execute organisms!
+
+      // Execute resources!
+      std::cout << "PopM Execute!" << std::endl;
     }
 
 

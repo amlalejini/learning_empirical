@@ -21,6 +21,9 @@
 
 #include "tools/Random.h"
 
+#include "geometry/Point2D.h"
+#include "tools/vector.h"
+
 namespace web = emp::web;
 
 // Some useful macros:
@@ -128,6 +131,23 @@ class EvoInPhysicsInterface {
 
       // Configure page view.
       UpdatePageView();
+
+      // -----------------
+      // Here's where I'll test some things.
+      // emp::vector<emp::Point<double> *> body_set;
+      // for (int i = 0; i < 10; i++) {
+      //   body_set.push_back(new emp::Point<double>(i, i * 2));
+      // }
+      // std::cout << "Loop 2:" << std::endl;
+      // for (auto i = 0; i < body_set.size(); i++) {
+      //   std::cout << "Pos: " << i << "  " << body_set[i] << "; Addr: " << *(body_set[i]) << std::endl;
+      // }
+      // std::cout << "Loop 3: " << std::endl;
+      // for (auto b : body_set) {
+      //   std::cout << b << std::endl;
+      // }
+
+      // -----------------
     }
 
     template<typename FieldType>

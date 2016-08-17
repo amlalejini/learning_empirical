@@ -69,6 +69,7 @@ namespace emp {
     double inv_mass;          // Inverse mass on this object (often useful to have precalculated)
     uint32_t color_id;        // Which color should this body appear?
     int repro_count;          // Number of offspring currently being produced.
+    bool detach_on_repro;     // Should body detach when link type is REPRODUCTION?
 
     Point<double> shift;            // How should this body be updated to minimize overlap.
     Point<double> cum_shift;        // Build up of shift not yet acted upon.
@@ -76,7 +77,7 @@ namespace emp {
     double pressure;                // Current pressure on this body.
 
   public:
-    Body2D_Base() : birth_time(0.0), mass(1.0), inv_mass(1 / mass), color_id(0), repro_count(0), pressure(0) { ; }
+    Body2D_Base() : birth_time(0.0), mass(1.0), inv_mass(1 / mass), color_id(0), repro_count(0), detach_on_repro(true), pressure(0) { ; }
     ~Body2D_Base() { ; }
 
     double GetBirthTime() const { return birth_time; }
@@ -87,10 +88,12 @@ namespace emp {
     uint32_t GetColorID() const { return color_id; }
     bool IsReproducing() const { return repro_count; }
     int GetReproCount() const { return repro_count; }
+    bool GetDetachOnRepro() const { return detach_on_repro; }
     Point<double> GetShift() const { return shift; }
     double GetPressure() const { return pressure; }
 
     void SetBirthTime(double in_time) { birth_time = in_time; }
+    void SetDetachOnRepro(bool detach) { detach_on_repro = detach; }
     void SetColorID(uint32_t in_id) { color_id = in_id; }
 
     // Orientation control...
@@ -239,7 +242,7 @@ namespace emp {
     }
 
     // If a body is not at its target radius, grow it or shrink it, as needed.
-    void BodyUpdate(double change_factor=1, bool detach_on_birth=true) {
+    void BodyUpdate(double change_factor=1, detach_on_birth = true) {
       // Test if this body needs to grow or shrink.
       if ((int) target_radius > (int) GetRadius()) SetRadius(GetRadius() + change_factor);
       else if ((int) target_radius < (int) GetRadius()) SetRadius(GetRadius() - change_factor);
@@ -266,8 +269,6 @@ namespace emp {
           else link->cur_dist -= change_factor;
         }
       }
-
-
     }
 
     // Move this body by its velocity and reduce velocity based on friction.

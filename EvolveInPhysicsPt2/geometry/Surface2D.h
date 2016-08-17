@@ -19,8 +19,6 @@
 //   void TestCollisions(std::function<bool(BODY_TYPE &, BODY_TYPE &)> collide_fun);
 //
 //
-//  Development notes:
-//  * Need a good function to remove a body; now we have to use GetBodySet() and modify it.
 
 
 #ifndef EMP_SURFACE_2D_H
@@ -30,6 +28,7 @@
 #include "tools/functions.h"
 #include "Body2D.h"
 #include <iostream>
+#include <algorithm>
 
 #include <functional>
 
@@ -63,7 +62,11 @@ namespace emp {
       return *this;
     }
 
-    // Remove a body.
+    // Remove a body. TODO: test this function
+    void RemoveBody(BODY_TYPE * body) {
+      body_set.erase(std::remove_if(body_set.begin(), body_set.end(),
+                                    [body](BODY_TYPE *body2){ return body == body2; }));
+    }
 
     // Clear all bodies on the surface.
     Surface2D & Clear() {

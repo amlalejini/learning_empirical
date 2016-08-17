@@ -267,6 +267,8 @@ namespace emp {
 
                 for (auto body2 : sector_set[sector_id]) {
                   test_count++;
+                  // TODO: this is where we should figure out what body and body2 are, then call appropriate resolve collision relying on proper overload.
+                  //  Ask Charles about fancy way of getting correct dynamic cast w/out if statements. 
                   if (CollideBodies(body, body2)) hit_count++;
                 }
 
@@ -295,7 +297,7 @@ namespace emp {
         auto &org_body_set = org_surface->GetBodySet();
         auto &resource_body_set = resource_surface->GetBodySet();
         // Update organism bodies
-        for (auto *cur_body : org_body_set) {    
+        for (auto *cur_body : org_body_set) {
           cur_body->BodyUpdate(0.25, detach_on_birth);                     // Let a body change size or shape, as needed
           cur_body->ProcessStep(0.00125);                 // Update position and velocity. (0.00125 -> friction)
         }

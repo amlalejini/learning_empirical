@@ -298,15 +298,13 @@ class EvoInPhysicsInterface {
     void InitializeExperiment() {
       std::cout << "InitializeExperiment!" << std::endl;
       // Setup the world.
-      if (world != nullptr) {delete world;
-      std::cout << "Post delete world?" << std::endl;}
+      if (world != nullptr) delete world;
       if (random != nullptr) delete random; // World does not own *random. Delete it.
       random = new emp::Random(random_seed);
       world = new SimplePhysicsWorld(random, "simple-world");
       // Setup world view canvs.
       world_view.ClearChildren();
       world_view << web::Canvas(world_width, world_height, "simple-world-canvas") << "<br>";
-      std::cout << "Pre world->ConfigPop()" << std::endl;
       // Configure new experiment.
       world->ConfigPop(world_width, world_height, surface_friction,
                        max_pop_size, point_mutation_rate, max_organism_radius,
@@ -319,7 +317,6 @@ class EvoInPhysicsInterface {
     void ResetEvolution() {
       std::cout << "Reset Evolution!" << std::endl;
       // Purge the world!
-      std::cout << "Org surface size(before world clear): "<< world->popM.GetPhysics().GetOrgBodySet().size() << std::endl;
       world->Clear();
       // Initialize the population.
       const emp::Point<double> mid_point(world_width / 2.0, world_height / 2.0);
@@ -330,20 +327,9 @@ class EvoInPhysicsInterface {
         if (random->P(0.05)) ancestor.genome[i] = !ancestor.genome[i];
       }
       ancestor.SetColorID();
-
-      // std::cout << "=============" << std::endl;
-      // Organism_t *testorg = new Organism_t(&ancestor);
-      // delete testorg;
-      // std::cout << "===============" << std::endl;
-      //std::cout << "test org have body? " << testorg->HasBody() << std::endl;
-      //delete testorg->GetBodyPtr();
-      //std::cout << "test org have body? " << testorg->HasBody() << std::endl;
       // TODO: ancestor.SetMass();
       // TODO: ancestor.SetPressureThreshold()
-      std::cout << "Org surface size1: "<< world->popM.GetPhysics().GetOrgBodySet().size() << std::endl;
-      world->Insert(ancestor, 5);
-      //world->popM.AddOrg(new Organism_t(&ancestor));
-      std::cout << "Org surface size2: "<< world->popM.GetPhysics().GetOrgBodySet().size() << std::endl;
+      world->Insert(ancestor, 1);
     }
 
     // Single animation step for this interface.

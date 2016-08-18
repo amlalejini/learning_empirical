@@ -29,11 +29,10 @@ class SimpleOrganism {
         pressure_threshold(1.0),
         genome(genome_length, false)
     {
-      std::cout << "Simple Organism arged constructor. Making new body. " << std::endl;
       body = new Body_t(_p);
       body->SetDetachOnRepro(detach_on_birth);
       body->SetBodyLabel(emp::BODY_LABEL::ORGANISM);
-      body->AddDestructionCallback([this]() { std::cout << "bod dest cb!" << std::endl; this->has_body = false; });
+      body->AddDestructionCallback([this]() { this->has_body = false; });
       has_body = true;
     }
 
@@ -43,15 +42,14 @@ class SimpleOrganism {
          pressure_threshold(other.GetPressureThreshold()),
          genome(other.genome)
     {
-      std::cout << "Simple Organism copy constructor 2. Making new body." << std::endl;
       body = new Body_t(other.GetConstBody().GetPerimeter());
       body->SetDetachOnRepro(other.GetDetachOnBirth());
       body->SetBodyLabel(emp::BODY_LABEL::ORGANISM);
-      body->AddDestructionCallback([this]() { std::cout << "bod dest cb!" << std::endl; this->has_body = false; });
+      body->AddDestructionCallback([this]() { this->has_body = false; });
       has_body = true;
     }
 
-    ~SimpleOrganism() { std::cout << "Org destructor pt1!" << std::endl; if (has_body) delete body;  std::cout << "Org destructor pt2!" << std::endl;}
+    ~SimpleOrganism() { if (has_body) delete body; }
 
     int GetOffspringCount() const { return offspring_count; }
     double GetBirthTime() const { return birth_time; }

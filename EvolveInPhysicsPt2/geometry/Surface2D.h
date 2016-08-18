@@ -74,11 +74,7 @@ namespace emp {
 
     // Clear all bodies on the surface.
     Surface2D & Clear() {
-      std::cout << "Surface2D clear()" << std::endl;
-      std::cout << "body_set.size() " << body_set.size() << std::endl;
       for (auto * body : body_set) {
-        std::cout << "  looking at a body..." << std::endl;
-        std::cout << "  body detail: " << body->GetRadius() << std::endl;
         delete body;
       }
       body_set.resize(0);

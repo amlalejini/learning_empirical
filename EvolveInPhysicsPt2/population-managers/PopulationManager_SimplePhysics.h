@@ -108,11 +108,8 @@ class PopulationManager_SimplePhysics {
     void Setup(Random *r) { random_ptr = r; }
 
     void Clear() {
-      std::cout << "PopM.Clear()" << std::endl;
       physics.Clear();
-      std::cout << "After physics.clear()" << std::endl;
       population.clear();
-      std::cout << "After population.clear()" << std::endl;
       resources.clear();
     }
 

@@ -47,7 +47,6 @@ namespace emp {
 
       ~SimplePhysics2D() {
         emp_assert(configured);
-        std::cout << "Simple physics destructor!" << std::endl;
         delete max_pos;
         delete org_surface;
         delete resource_surface;
@@ -61,11 +60,8 @@ namespace emp {
       bool GetHeight() const { emp_assert(configured); return max_pos->GetY(); }
 
       SimplePhysics2D & Clear() {
-        std::cout << "Simple physics clear() " << std::endl;
         if (configured) {
-          std::cout << " -- is configured" << std::endl;
           org_surface->Clear();
-          std::cout << "after org surface clear()" << std::endl;
           resource_surface->Clear();
         }
         return *this;

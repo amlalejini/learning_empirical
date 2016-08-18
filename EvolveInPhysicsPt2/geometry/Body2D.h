@@ -84,10 +84,13 @@ namespace emp {
     Point<double> cum_shift;        // Build up of shift not yet acted upon.
     Point<double> total_abs_shift;  // Total absolute-value of shifts (to calculate pressure)
     double pressure;                // Current pressure on this body.
-    Signal<> destruction_signal;
+    double max_pressure;            // Max amount of pressure this body can withstand.
+    Signal<> destruction_signal;          // Triggered on body destruction.
+    Signal<Body2D_Base*> collision_signal; // Triggered on collision with another body.
+    bool is_colliding;   // Is currently colliding?
 
   public:
-    Body2D_Base() : body_label(BODY_LABEL::DEFAULT), birth_time(0.0), mass(1.0), inv_mass(1 / mass), color_id(0), repro_count(0), detach_on_repro(true), growth_rate(1.0), pressure(0) { ; }
+    Body2D_Base() : body_label(BODY_LABEL::DEFAULT), birth_time(0.0), mass(1.0), inv_mass(1 / mass), color_id(0), repro_count(0), detach_on_repro(true), growth_rate(1.0), pressure(0), max_pressure(1.0), is_colliding(false) { ; }
     ~Body2D_Base() { destruction_signal.Trigger(); }
 
     double GetBirthTime() const { return birth_time; }
@@ -97,14 +100,17 @@ namespace emp {
     double GetInvMass() const { return inv_mass; }
     uint32_t GetColorID() const { return color_id; }
     bool IsReproducing() const { return repro_count; }
+    bool IsColliding() const { return is_colliding; }
     int GetReproCount() const { return repro_count; }
     bool GetDetachOnRepro() const { return detach_on_repro; }
     Point<double> GetShift() const { return shift; }
     double GetPressure() const { return pressure; }
+    double GetMaxPressure() const { return max_pressure; }
     double GetGrowthRate() const { return growth_rate; }
     BODY_LABEL GetBodyLabel() const { return body_label; }
 
     void SetBirthTime(double in_time) { birth_time = in_time; }
+    void SetMaxPressure(double mp) { max_pressure = mp; }
     void SetDetachOnRepro(bool detach) { detach_on_repro = detach; }
     void SetGrowthRate(double rate) { growth_rate = rate; }
     void SetColorID(uint32_t in_id) { color_id = in_id; }
@@ -112,7 +118,18 @@ namespace emp {
     void AddDestructionCallback(std::function<void()> callback) {
       destruction_signal.AddAction(callback);
     }
-
+    void AddCollisionCallback(std::function<void(Body2D_Base*)> callback) {
+      collision_signal.AddAction(callback);
+    }
+    // Called on collision. Set is colliding flag.
+    void TriggerCollision(Body2D_Base *other_body) {
+      is_colliding = true;
+      collision_signal.Trigger(other_body);
+    }
+    // Call to signal that the current collision has been resolved.
+    void ResolveCollision() {
+      is_colliding = false;
+    }
     // Orientation control...
     void TurnLeft(int steps = 1) { orientation.RotateDegrees(steps * 45); }
     void TurnRight(int steps = 1) { orientation.RotateDegrees(steps * -45); }
@@ -259,14 +276,14 @@ namespace emp {
     }
 
     // See BodyUpdate(double, double).
-    void BodyUpdate(double friction = 0.0) {
+    void BodyUpdate(double friction) {
       this->BodyUpdate(friction, growth_rate);
     }
 
     // * If a body is not at its target radius, grow it or shrink it, as needed.
     // * Move body by its velocity.
     // * Reduce velocity by based on friction.
-    void BodyUpdate(double friction = 0.0, double change_factor = 1.0) {
+    void BodyUpdate(double friction, double change_factor) {
       // Test if this body needs to grow or shrink.
       if ((int) target_radius > (int) GetRadius()) SetRadius(GetRadius() + change_factor);
       else if ((int) target_radius < (int) GetRadius()) SetRadius(GetRadius() - change_factor);
@@ -312,8 +329,7 @@ namespace emp {
       const double max_x = max_coords.GetX() - GetRadius();
       const double max_y = max_coords.GetY() - GetRadius();
 
-      // Update the caclulcation for pressure.
-
+      // TODO: Update the caclulcation for pressure.
       // Act on the accumulated shifts only when they add up enough.
       cum_shift += shift;
       if (cum_shift.SquareMagnitude() > 0.25) {

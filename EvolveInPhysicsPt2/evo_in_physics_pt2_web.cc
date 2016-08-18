@@ -84,6 +84,7 @@ const double DEFAULT_POINT_MUTATION_RATE = 0.01;
 const double DEFAULT_MAX_ORGANISM_RADIUS = 10;
 const double DEFAULT_COST_OF_REPRO = 1;
 const bool DEFAULT_DETACH_ON_BIRTH = true;
+const double DEFAULT_ORGANISM_MEMBRANE_STRENGTH = 10.0;
 //  -- Resource-specific --
 const int DEFAULT_MAX_RESOURCE_AGE = 100;
 const int DEFAULT_MAX_RESOURCE_COUNT = 100;
@@ -127,6 +128,8 @@ class EvoInPhysicsInterface {
     double max_organism_radius;
     double cost_of_repro;
     bool detach_on_birth;
+    double organism_membrane_strength;
+    //double organism_density;
     //  -- Resource-specific --
     int max_resource_age;
     int max_resource_count;
@@ -161,6 +164,7 @@ class EvoInPhysicsInterface {
       max_organism_radius = DEFAULT_MAX_ORGANISM_RADIUS;
       cost_of_repro = DEFAULT_COST_OF_REPRO;
       detach_on_birth = DEFAULT_DETACH_ON_BIRTH;
+      organism_membrane_strength = DEFAULT_ORGANISM_MEMBRANE_STRENGTH;
       //  -- Resource-specific --
       max_resource_age = DEFAULT_MAX_RESOURCE_AGE;
       max_resource_count = DEFAULT_MAX_RESOURCE_COUNT;
@@ -193,9 +197,20 @@ class EvoInPhysicsInterface {
       // --- Setup Stats View. ---
       stats_view.SetAttr("class", "well");
       stats_view << "<h2>Stats View</h2><br>";
-      stats_view << "Update: " << "<br>";
-      stats_view << "Organism Count: " << "<br>";
-      stats_view << "Resource Count: " << "<br>";
+      stats_view << "Update: "
+                 << web::Live([this]() {
+                      if (world != nullptr) return world->update;
+                      else return -1; }) << "<br>";
+      stats_view << "Organism Count: "
+                 << web::Live([this]() {
+                      if (world != nullptr) return world->popM.GetSize();
+                      else return -1; })
+                 << "<br>";
+      stats_view << "Resource Count: "
+                 << web::Live([this]() {
+                      if (world != nullptr) return world->popM.GetNumResources();
+                      else return -1; })
+                 << "<br>";
       // --- Setup Config View. ---
       param_view.SetAttr("class", "well");
       // -- General --
@@ -211,6 +226,7 @@ class EvoInPhysicsInterface {
       param_view << "Max Organism Radius: " << web::Live([this]() { return max_organism_radius; }) << "<br>";
       param_view << "Cost of Reproduction: " << web::Live([this]() { return cost_of_repro; }) << "<br>";
       param_view << "Detach on Birth: " << web::Live([this]() { return (int) detach_on_birth; }) << "<br>";
+      param_view << "Organism Membrane Strength: " << web::Live([this]() { return organism_membrane_strength; }) << "<br>";
       // -- Resource-Specific --
       param_view << "Max Resource Age: " << web::Live([this]() { return max_resource_age; }) << "<br>";
       param_view << "Max Resource Count: " << web::Live([this]() { return max_resource_count; }) << "<br>";
@@ -242,6 +258,7 @@ class EvoInPhysicsInterface {
       exp_config << GenerateParamNumberField("Max Organism Radius", "max-organism-radius", max_organism_radius);
       exp_config << GenerateParamNumberField("Cost of Reproduction", "cost-of-repro", cost_of_repro);
       exp_config << GenerateParamCheckboxField("Detach on Birth", "detach-on-birth", detach_on_birth);
+      exp_config << GenerateParamNumberField("Organism Membrane Strength", "organism-membrane-strength", organism_membrane_strength);
       //  -- Resource-specific --
       exp_config << "<h3>Resource-Specific Settings</h3>";
       exp_config << GenerateParamNumberField("Max Resource Age", "max-resource-age", max_resource_age);
@@ -318,28 +335,63 @@ class EvoInPhysicsInterface {
       std::cout << "Reset Evolution!" << std::endl;
       // Purge the world!
       world->Clear();
+      world->update = 0;
       // Initialize the population.
       const emp::Point<double> mid_point(world_width / 2.0, world_height / 2.0);
       int org_radius = max_organism_radius;
-      Organism_t ancestor = Organism_t(emp::Circle<double>(mid_point, org_radius), genome_length, detach_on_birth);
+      Organism_t ancestor(emp::Circle<double>(mid_point, org_radius), genome_length, detach_on_birth);
       // Randomize ancestor genome.
       for (int i = 0; i < ancestor.genome.GetSize(); i++) {
         if (random->P(0.05)) ancestor.genome[i] = !ancestor.genome[i];
       }
       ancestor.SetColorID();
-      // TODO: ancestor.SetMass();
-      // TODO: ancestor.SetPressureThreshold()
+      // TODO: make mass dependent on density
+      ancestor.GetBody().SetMass(10.0);
+      ancestor.SetMembraneStrength(organism_membrane_strength);
+      ancestor.SetBirthTime(-1);
       world->Insert(ancestor, 1);
+      // For testing:
+      for (int i = 0; i < 10; i++) {
+        const emp::Point<double> loc(random->GetInt(world_width), random->GetInt(world_height));
+        Organism_t orgie(emp::Circle<double>(loc, org_radius), genome_length, detach_on_birth);
+        orgie.SetColorID();
+        orgie.GetBody().SetMass(10.0);
+        orgie.SetMembraneStrength(organism_membrane_strength);
+        orgie.SetBirthTime(-1);
+        world->Insert(orgie);
+      }
+
     }
 
     // Single animation step for this interface.
     void Animate(const web::Animate &anim) {
       std::cout << "Animate!" << std::endl;
+      world->Update();
+      std::cout << world->update << std::endl;
+      // Draw
+      web::Draw(world_view.Canvas("simple-world-canvas"), world->popM.GetPhysics().GetSurfaceSet(), emp::GetHueMap(360));
+      stats_view.Redraw();
     }
 
     // Called on start/stop button press.
     bool DoToggleRun() {
       std::cout << "Do Toggle Run!" << std::endl;
+      anim.ToggleActive();
+      // Grab buttons to manipulate:
+      auto start_but = dashboard.Button("start_but");
+      auto step_but = dashboard.Button("step_but");
+      // Update buttons
+      if (anim.GetActive()) {
+        // If active, set button to show 'stop' button.
+        start_but.Label(PAUSE_GLYPH);
+        start_but.SetAttr("class", "btn btn-danger");
+        step_but.Disabled(true);
+      } else {
+        // If inactive, set button to show 'play' option.
+        start_but.Label(PLAY_GLYPH);
+        start_but.SetAttr("class", "btn btn-success");
+        step_but.Disabled(false);
+      }
       return true;
     }
 
@@ -355,6 +407,8 @@ class EvoInPhysicsInterface {
     // Called on step button press.
     bool DoStep() {
       std::cout << "Do Step!" << std::endl;
+      emp_assert(anim.GetActive() == false);
+      anim.Step();
       return true;
     }
 
@@ -395,6 +449,7 @@ class EvoInPhysicsInterface {
       max_organism_radius = EM_ASM_DOUBLE_V({ return $("#max-organism-radius-param").val(); });
       cost_of_repro = EM_ASM_DOUBLE_V({ return $("#cost-of-repro-param").val(); });
       detach_on_birth = EM_ASM_INT_V({ return $("#detach-on-birth-param").is(":checked"); });
+      organism_membrane_strength = EM_ASM_DOUBLE_V({ return $("#organism-membrane-strength-param").val(); });
       // -- Resource-Specific --
       max_resource_age = EM_ASM_INT_V({ return $("#max-resource-age-param").val(); });
       max_resource_count = EM_ASM_INT_V({ return $("#max-resource-count-param").val(); });

@@ -132,13 +132,34 @@ class PopulationManager_SimplePhysics {
     }
 
     // Progress time by one step.
-    void Execute() {
-      // Progress physics.
+    void Update() {
+      // Progress physics (progress each physics body a single time step).
       physics.Update();
-      // Execute organisms!
+      emp::vector<Org_t *> new_organisms;
+      // TODO: Manage population.
+      int cur_size = GetSize();
+      int cur_id = 0;
+      while (cur_id < cur_size) {
+        Org_t *org = population[cur_id];
+        // Remove organisms with no body.
+        if (!org->HasBody()) {
+          std::cout << "This org has no body!" << std::endl;
+          delete org;
+          cur_size--;
+          population[cur_id] = population[cur_size];
+          continue;
+        }
+        // Organism has body, proceed.
+        // TODO: Feed e'body.
+        // TODO: Reproduction.
+        // Add some noise to movement.         
+        org->GetBody().IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(movement_noise));
+        cur_id++;
+      }
+      population.resize(cur_size);
 
-      // Execute resources!
-      std::cout << "PopM Execute!" << std::endl;
+      // TODO: Manage resources.
+
     }
 
 

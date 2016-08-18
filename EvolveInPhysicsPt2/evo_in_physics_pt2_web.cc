@@ -30,7 +30,7 @@
 #include "tools/vector.h"
 #include "tools/assert.h"
 
-#include "evo/world.h"
+#include "evo/World.h"
 
 namespace emp {
 namespace web {
@@ -83,6 +83,7 @@ const int DEFAULT_GENOME_LENGTH = 10;
 const double DEFAULT_POINT_MUTATION_RATE = 0.01;
 const double DEFAULT_MAX_ORGANISM_RADIUS = 10;
 const double DEFAULT_COST_OF_REPRO = 1;
+const bool DEFAULT_DETACH_ON_BIRTH = true;
 //  -- Resource-specific --
 const int DEFAULT_MAX_RESOURCE_AGE = 100;
 const int DEFAULT_MAX_RESOURCE_COUNT = 100;
@@ -96,7 +97,8 @@ const double DEFAULT_MOVEMENT_NOISE = 0.15;
 class EvoInPhysicsInterface {
   private:
     // Aliases
-    using SimplePhysicsWorld = emp::evo::World<SimpleOrganism, emp::evo::PopulationManager_SimplePhysics<SimpleOrganism> >;
+    using Organism_t = SimpleOrganism;
+    using SimplePhysicsWorld = emp::evo::World<Organism_t, emp::evo::PopulationManager_SimplePhysics<Organism_t> >;
 
     emp::Random *random;
     SimplePhysicsWorld *world;
@@ -124,6 +126,7 @@ class EvoInPhysicsInterface {
     int genome_length;
     double max_organism_radius;
     double cost_of_repro;
+    bool detach_on_birth;
     //  -- Resource-specific --
     int max_resource_age;
     int max_resource_count;
@@ -157,6 +160,7 @@ class EvoInPhysicsInterface {
       genome_length = DEFAULT_GENOME_LENGTH;
       max_organism_radius = DEFAULT_MAX_ORGANISM_RADIUS;
       cost_of_repro = DEFAULT_COST_OF_REPRO;
+      detach_on_birth = DEFAULT_DETACH_ON_BIRTH;
       //  -- Resource-specific --
       max_resource_age = DEFAULT_MAX_RESOURCE_AGE;
       max_resource_count = DEFAULT_MAX_RESOURCE_COUNT;
@@ -206,6 +210,7 @@ class EvoInPhysicsInterface {
       param_view << "Point Mutation Rate: " << web::Live([this]() { return point_mutation_rate; }) << "<br>";
       param_view << "Max Organism Radius: " << web::Live([this]() { return max_organism_radius; }) << "<br>";
       param_view << "Cost of Reproduction: " << web::Live([this]() { return cost_of_repro; }) << "<br>";
+      param_view << "Detach on Birth: " << web::Live([this]() { return (int) detach_on_birth; }) << "<br>";
       // -- Resource-Specific --
       param_view << "Max Resource Age: " << web::Live([this]() { return max_resource_age; }) << "<br>";
       param_view << "Max Resource Count: " << web::Live([this]() { return max_resource_count; }) << "<br>";
@@ -236,6 +241,7 @@ class EvoInPhysicsInterface {
       exp_config << GenerateParamNumberField("Point Mutation Rate", "point-mutation-rate", point_mutation_rate);
       exp_config << GenerateParamNumberField("Max Organism Radius", "max-organism-radius", max_organism_radius);
       exp_config << GenerateParamNumberField("Cost of Reproduction", "cost-of-repro", cost_of_repro);
+      exp_config << GenerateParamCheckboxField("Detach on Birth", "detach-on-birth", detach_on_birth);
       //  -- Resource-specific --
       exp_config << "<h3>Resource-Specific Settings</h3>";
       exp_config << GenerateParamNumberField("Max Resource Age", "max-resource-age", max_resource_age);
@@ -260,34 +266,47 @@ class EvoInPhysicsInterface {
 
     template<typename FieldType>
     std::string GenerateParamTextField(std::string field_name, std::string field_id, FieldType default_value) {
-      std::stringstream param_html;
-      param_html << "<div class =\"input-group\">";
-        param_html << "<span class=\"input-group-addon\" id=\"" << field_id << "-addon\">" << field_name << "</span>  ";
-        param_html << "<input type=\"text\" class=\"form-control\" value=\"" << default_value << "\"aria-describedby=\"" << field_id << "-addon\" id=\"" << field_id << "-param\">";
-      param_html << "</div>";
-      return param_html.str();
+      return GenerateParamField(field_name, field_id, default_value, "Text");
     }
 
     template<typename FieldType>
     std::string GenerateParamNumberField(std::string field_name, std::string field_id, FieldType default_value) {
+      return GenerateParamField(field_name, field_id, default_value, "Number");
+    }
+
+    std::string GenerateParamCheckboxField(std::string field_name, std::string field_id, bool default_value) {
+      return GenerateParamField(field_name, field_id, default_value, "checkbox");
+    }
+
+    // TODO: Make checkbox input look nice.
+    template<typename FieldType>
+    std::string GenerateParamField(std::string field_name, std::string field_id, FieldType default_value, std::string input_type) {
       std::stringstream param_html;
-      param_html << "<div class =\"input-group\">";
-        param_html << "<span class=\"input-group-addon\" id=\"" << field_id << "-addon\">" << field_name << "</span>  ";
-        param_html << "<input type=\"number\" class=\"form-control\" value=\"" << default_value << "\"aria-describedby=\"" << field_id << "-addon\" id=\"" << field_id << "-param\">";
-      param_html << "</div>";
+        param_html << "<div class=\"input-group\">";
+          param_html << "<span class=\"input-group-addon\" id=\"" << field_id << "-addon\">" << field_name << "</span>  ";
+          param_html << "<input type=\"" << input_type << "\""
+                     << " class=\"form-control\""
+                     << " aria-describedby=\"" << field_id << "-addon\""
+                     << " id=\"" << field_id << "-param\"";
+                     if (input_type == "checkbox") param_html << "checked=\"" << default_value << "\">";
+                     else param_html << " value=\"" << default_value << "\">";
+        param_html << "</div>";
       return param_html.str();
     }
 
     // Call to initialize a new experiment with current config values.
     void InitializeExperiment() {
+      std::cout << "InitializeExperiment!" << std::endl;
       // Setup the world.
-      if (world != nullptr) delete world;
+      if (world != nullptr) {delete world;
+      std::cout << "Post delete world?" << std::endl;}
       if (random != nullptr) delete random; // World does not own *random. Delete it.
       random = new emp::Random(random_seed);
       world = new SimplePhysicsWorld(random, "simple-world");
       // Setup world view canvs.
       world_view.ClearChildren();
       world_view << web::Canvas(world_width, world_height, "simple-world-canvas") << "<br>";
+      std::cout << "Pre world->ConfigPop()" << std::endl;
       // Configure new experiment.
       world->ConfigPop(world_width, world_height, surface_friction,
                        max_pop_size, point_mutation_rate, max_organism_radius,
@@ -298,10 +317,33 @@ class EvoInPhysicsInterface {
     }
 
     void ResetEvolution() {
+      std::cout << "Reset Evolution!" << std::endl;
       // Purge the world!
+      std::cout << "Org surface size(before world clear): "<< world->popM.GetPhysics().GetOrgBodySet().size() << std::endl;
       world->Clear();
       // Initialize the population.
-      std::cout << "Here's where I would initialize the population anew." << std::endl;
+      const emp::Point<double> mid_point(world_width / 2.0, world_height / 2.0);
+      int org_radius = max_organism_radius;
+      Organism_t ancestor = Organism_t(emp::Circle<double>(mid_point, org_radius), genome_length, detach_on_birth);
+      // Randomize ancestor genome.
+      for (int i = 0; i < ancestor.genome.GetSize(); i++) {
+        if (random->P(0.05)) ancestor.genome[i] = !ancestor.genome[i];
+      }
+      ancestor.SetColorID();
+
+      // std::cout << "=============" << std::endl;
+      // Organism_t *testorg = new Organism_t(&ancestor);
+      // delete testorg;
+      // std::cout << "===============" << std::endl;
+      //std::cout << "test org have body? " << testorg->HasBody() << std::endl;
+      //delete testorg->GetBodyPtr();
+      //std::cout << "test org have body? " << testorg->HasBody() << std::endl;
+      // TODO: ancestor.SetMass();
+      // TODO: ancestor.SetPressureThreshold()
+      std::cout << "Org surface size1: "<< world->popM.GetPhysics().GetOrgBodySet().size() << std::endl;
+      world->Insert(ancestor, 5);
+      //world->popM.AddOrg(new Organism_t(&ancestor));
+      std::cout << "Org surface size2: "<< world->popM.GetPhysics().GetOrgBodySet().size() << std::endl;
     }
 
     // Single animation step for this interface.
@@ -330,32 +372,6 @@ class EvoInPhysicsInterface {
       return true;
     }
 
-    // Update parameter values from webpage using javascript.
-    void UpdateParams() {
-      // @amlalejini QUESTION: What is the best way to be collecting parameter values?
-      // TODO: clean parameters (clip to max/min values, etc).
-      // TODO: switch to config system, automate this.
-      // -- General --
-      random_seed = EM_ASM_INT_V({ return $("#random-seed-param").val(); });
-      world_width = EM_ASM_INT_V({ return $("#world-width-param").val(); });
-      world_height = EM_ASM_INT_V({ return $("#world-height-param").val(); });
-      // -- Population-Specific --
-      max_pop_size = EM_ASM_INT_V({ return $("#max-pop-size-param").val(); });
-      // -- Organism-Specific --
-      genome_length = EM_ASM_INT_V({ return $("#genome-length-param").val(); });
-      point_mutation_rate = EM_ASM_DOUBLE_V({ return $("#point-mutation-rate-param").val(); });
-      max_organism_radius = EM_ASM_DOUBLE_V({ return $("#max-organism-radius-param").val(); });
-      cost_of_repro = EM_ASM_DOUBLE_V({ return $("#cost-of-repro-param").val(); });
-      // -- Resource-Specific --
-      max_resource_age = EM_ASM_INT_V({ return $("#max-resource-age-param").val(); });
-      max_resource_count = EM_ASM_INT_V({ return $("#max-resource-count-param").val(); });
-      resource_radius = EM_ASM_DOUBLE_V({ return $("#resource-radius-param").val(); });
-      resource_value = EM_ASM_DOUBLE_V({ return $("#resource-value-param").val(); });
-      // -- Physics-Specific --
-      surface_friction = EM_ASM_DOUBLE_V({ return $("#surface-friction-param").val(); });
-      movement_noise = EM_ASM_DOUBLE_V({ return $("#movement-noise-param").val(); });
-    }
-
     // Called on run experiment button press (from config exp page).
     bool DoRunExperiment() {
       std::cout << "Do Run Experiment!" << std::endl;
@@ -374,6 +390,33 @@ class EvoInPhysicsInterface {
       // Set page mode to CONFIG.
       page_mode = ChangePageView(PageMode::CONFIG);
       return true;
+    }
+
+    // Update parameter values from webpage using javascript.
+    void UpdateParams() {
+      // @amlalejini QUESTION: What is the best way to be collecting parameter values?
+      // TODO: clean parameters (clip to max/min values, etc).
+      // TODO: switch to config system, automate this.
+      // -- General --
+      random_seed = EM_ASM_INT_V({ return $("#random-seed-param").val(); });
+      world_width = EM_ASM_INT_V({ return $("#world-width-param").val(); });
+      world_height = EM_ASM_INT_V({ return $("#world-height-param").val(); });
+      // -- Population-Specific --
+      max_pop_size = EM_ASM_INT_V({ return $("#max-pop-size-param").val(); });
+      // -- Organism-Specific --
+      genome_length = EM_ASM_INT_V({ return $("#genome-length-param").val(); });
+      point_mutation_rate = EM_ASM_DOUBLE_V({ return $("#point-mutation-rate-param").val(); });
+      max_organism_radius = EM_ASM_DOUBLE_V({ return $("#max-organism-radius-param").val(); });
+      cost_of_repro = EM_ASM_DOUBLE_V({ return $("#cost-of-repro-param").val(); });
+      detach_on_birth = EM_ASM_INT_V({ return $("#detach-on-birth-param").is(":checked"); });
+      // -- Resource-Specific --
+      max_resource_age = EM_ASM_INT_V({ return $("#max-resource-age-param").val(); });
+      max_resource_count = EM_ASM_INT_V({ return $("#max-resource-count-param").val(); });
+      resource_radius = EM_ASM_DOUBLE_V({ return $("#resource-radius-param").val(); });
+      resource_value = EM_ASM_DOUBLE_V({ return $("#resource-value-param").val(); });
+      // -- Physics-Specific --
+      surface_friction = EM_ASM_DOUBLE_V({ return $("#surface-friction-param").val(); });
+      movement_noise = EM_ASM_DOUBLE_V({ return $("#movement-noise-param").val(); });
     }
 
     PageMode ChangePageView(PageMode new_mode) {
@@ -399,7 +442,6 @@ class EvoInPhysicsInterface {
       }
       return new_mode;
     }
-
 };
 
 EvoInPhysicsInterface *interface;

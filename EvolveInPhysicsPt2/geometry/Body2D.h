@@ -28,12 +28,14 @@
 #include "tools/mem_track.h"
 #include "tools/Ptr.h"
 #include "tools/vector.h"
+#include "tools/signal.h"
 
 #include "Angle2D.h"
 #include "Circle2D.h"
 
 #include <iostream>
 #include <string>
+#include <functional>
 
 namespace emp {
 
@@ -82,10 +84,11 @@ namespace emp {
     Point<double> cum_shift;        // Build up of shift not yet acted upon.
     Point<double> total_abs_shift;  // Total absolute-value of shifts (to calculate pressure)
     double pressure;                // Current pressure on this body.
+    Signal<> destruction_signal;
 
   public:
-    Body2D_Base() : body_label(BODY_LABEL::DEFAULT), birth_time(0.0), mass(1.0), inv_mass(1 / mass), color_id(0), repro_count(0), detach_on_repro(true), growth_rate(1.0), pressure(0) { ; }
-    ~Body2D_Base() { ; }
+    Body2D_Base() : body_label(BODY_LABEL::DEFAULT), birth_time(0.0), mass(1.0), inv_mass(1 / mass), color_id(0), repro_count(0), detach_on_repro(true), growth_rate(1.0), pressure(0) { std::cout << "BODY2d constructor!" << std::endl; }
+    ~Body2D_Base() { std::cout << "Body2d destructor!" << std::endl; destruction_signal.Trigger(); }
 
     double GetBirthTime() const { return birth_time; }
     const Angle & GetOrientation() const { return orientation; }
@@ -106,6 +109,9 @@ namespace emp {
     void SetGrowthRate(double rate) { growth_rate = rate; }
     void SetColorID(uint32_t in_id) { color_id = in_id; }
     void SetBodyLabel(BODY_LABEL label) { body_label = label; }
+    void AddDestructionCallback(std::function<void()> callback) {
+      destruction_signal.AddAction(callback);
+    }
 
     // Orientation control...
     void TurnLeft(int steps = 1) { orientation.RotateDegrees(steps * 45); }

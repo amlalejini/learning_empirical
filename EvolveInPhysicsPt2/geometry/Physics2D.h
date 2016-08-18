@@ -47,6 +47,7 @@ namespace emp {
 
       ~SimplePhysics2D() {
         emp_assert(configured);
+        std::cout << "Simple physics destructor!" << std::endl;
         delete max_pos;
         delete org_surface;
         delete resource_surface;
@@ -60,8 +61,11 @@ namespace emp {
       bool GetHeight() const { emp_assert(configured); return max_pos->GetY(); }
 
       SimplePhysics2D & Clear() {
+        std::cout << "Simple physics clear() " << std::endl;
         if (configured) {
+          std::cout << " -- is configured" << std::endl;
           org_surface->Clear();
+          std::cout << "after org surface clear()" << std::endl;
           resource_surface->Clear();
         }
         return *this;
@@ -86,20 +90,20 @@ namespace emp {
         configured = true;
       }
 
-      SimplePhysics2D & AddOrgBody(BODY_TYPE *in_body) {
+      SimplePhysics2D & AddOrgBody(BODY_TYPE * in_body) {
         emp_assert(configured && (in_body->GetBodyLabel() == BODY_LABEL::ORGANISM));
         org_surface->AddBody(in_body);
         return *this;
       }
 
-      SimplePhysics2D & AddResourceBody(BODY_TYPE *in_body) {
+      SimplePhysics2D & AddResourceBody(BODY_TYPE * in_body) {
         emp_assert(configured && (in_body->GetBodyLabel() == BODY_LABEL::RESOURCE));
         resource_surface->AddBody(in_body);
         return *this;
       }
 
       //TODO: CollideBodies
-      bool CollideBodies(BODY_TYPE *body1, BODY_TYPE *body2) {
+      bool CollideBodies(BODY_TYPE &body1, BODY_TYPE &body2) {
         emp_assert(configured);
         return false;
       }

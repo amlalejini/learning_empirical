@@ -29,7 +29,6 @@
 #include "Body2D.h"
 #include <iostream>
 #include <algorithm>
-
 #include <functional>
 
 namespace emp {
@@ -60,20 +59,28 @@ namespace emp {
     void SetFriction(double friction) { this->friction = friction; }
 
     // Add a single body.  Surface now controls this body and must delete it.
-    Surface2D & AddBody(BODY_TYPE * new_body) {
+    Surface2D & AddBody(BODY_TYPE *new_body) {
       body_set.push_back(new_body);     // Add body to master list
       return *this;
     }
 
     // Remove a body. TODO: test this function
-    void RemoveBody(BODY_TYPE * body) {
+    void RemoveBody(BODY_TYPE *body) {
+      std::cout << "RemoveBody() [body_set size: "<< body_set.size() << "]" << std::endl;
       body_set.erase(std::remove_if(body_set.begin(), body_set.end(),
                                     [body](BODY_TYPE *body2){ return body == body2; }));
+
     }
 
     // Clear all bodies on the surface.
     Surface2D & Clear() {
-      for (auto * body : body_set) delete body;
+      std::cout << "Surface2D clear()" << std::endl;
+      std::cout << "body_set.size() " << body_set.size() << std::endl;
+      for (auto * body : body_set) {
+        std::cout << "  looking at a body..." << std::endl;
+        std::cout << "  body detail: " << body->GetRadius() << std::endl;
+        delete body;
+      }
       body_set.resize(0);
       return *this;
     }

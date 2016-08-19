@@ -148,7 +148,7 @@ namespace emp {
 
     // Shift to apply next update.
     void AddShift(const Point<double> & s) { shift += s; total_abs_shift += s.Abs(); }
-};
+  };
 
   class CircleBody2D : public Body2D_Base {
   protected:
@@ -176,7 +176,7 @@ namespace emp {
     {
       //EMP_TRACK_CONSTRUCT(CircleBody2D);
     }
-    virtual ~CircleBody2D() {
+    ~CircleBody2D() {
       // Remove any remaining links from this body.
       while (from_links.size()) RemoveLink(from_links[0]);
       while (to_links.size()) RemoveLink(to_links[0]);
@@ -385,7 +385,6 @@ namespace emp {
       }
       return true;
     }
-
   };
 };
 

@@ -242,7 +242,7 @@ namespace emp {
     }
 
     // If a body is not at its target radius, grow it or shrink it, as needed.
-    void BodyUpdate(double change_factor=1, detach_on_birth = true) {
+    void BodyUpdate(double change_factor=1, bool detach_on_birth = true) {
       // Test if this body needs to grow or shrink.
       if ((int) target_radius > (int) GetRadius()) SetRadius(GetRadius() + change_factor);
       else if ((int) target_radius < (int) GetRadius()) SetRadius(GetRadius() - change_factor);

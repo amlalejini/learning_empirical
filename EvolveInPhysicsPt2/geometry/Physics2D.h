@@ -248,9 +248,9 @@ namespace emp {
           }
         }
         org_body_set.resize(cur_size);
-        // * Resource body removal:
-        cur_size = (int) resource_body_set.size();
-        cur_id = 0;
+        // * Resource body removal: For now, resources can't be popped.
+        // cur_size = (int) resource_body_set.size();
+        // cur_id = 0;
 
       }
 

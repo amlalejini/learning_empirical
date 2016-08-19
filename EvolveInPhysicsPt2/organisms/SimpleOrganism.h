@@ -9,6 +9,7 @@
 #include "tools/Random.h"
 
 #include "../geometry/Body2D.h"
+#include "../resources/SimpleResource.h"
 
 // TODO: make SimpleOrganism bodies compatible with surface
 class SimpleOrganism {
@@ -89,8 +90,18 @@ class SimpleOrganism {
       return offspring;
     }
 
+    // This is called when this organism's body is involved in a collision.
     void HandleCollision(emp::Body2D_Base *other_body) {
       std::cout << "Handling collision from org.." << std::endl;
+      if (other_body->GetBodyLabel() == emp::BODY_LABEL::RESOURCE) {
+        // Attempt to consume!
+        // TODO: need to be able to calculate probability of consumption based on resource
+        std::cout << "Organism consuming resource..." << std::endl;
+        std::cout << "resource value: " << static_cast<SimpleResourceBody *>(other_body)->GetOwner()->GetValue() << std::endl;
+        // Mark collision as resolved
+        body->ResolveCollision();
+        other_body->ResolveCollision();
+      }
     }
 
     bool operator==(const SimpleOrganism &other) const {

@@ -152,13 +152,41 @@ class PopulationManager_SimplePhysics {
         // Organism has body, proceed.
         // TODO: Feed e'body.
         // TODO: Reproduction.
-        // Add some noise to movement.         
+        // Add some noise to movement.
         org->GetBody().IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(movement_noise));
         cur_id++;
       }
       population.resize(cur_size);
 
-      // TODO: Manage resources.
+      // Manage resources.
+      cur_size = GetNumResources();
+      cur_id = 0;
+      while (cur_id < cur_size) {
+        Resource_t *resource = resources[cur_id];
+        // Remove resources with no body.
+        if (!resource->HasBody()) {
+          delete resource;
+          cur_size--;
+          resources[cur_id] = resources[cur_size];
+          continue;
+        }
+        // Resource has body, proceed.
+        // Add some noise to movement.
+        resource->GetBody().IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(movement_noise));
+        cur_id++;
+      }
+      resources.resize(cur_size);
+      // Pump resources in as necessary to max capacity.
+      while (GetNumResources() < max_resource_count) {
+        emp_assert((physics.GetWidth() > resource_radius * 2.0) && (physics.GetHeight() > resource_radius * 2.0));
+        emp::Point<double> res_loc(random_ptr->GetDouble(resource_radius, physics.GetWidth() - resource_radius), random_ptr->GetDouble(resource_radius, physics.GetHeight() - resource_radius));
+        Resource_t *new_resource = new Resource_t(emp::Circle<double>(res_loc, resource_radius));
+        new_resource->SetValue(resource_value);
+        // TODO: make the below values not magic numbers.
+        new_resource->SetColorID(180);
+        new_resource->GetBody().SetMass(1);
+        AddResource(new_resource);
+      }
 
     }
 

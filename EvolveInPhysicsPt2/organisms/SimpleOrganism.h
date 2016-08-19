@@ -32,9 +32,8 @@ class SimpleOrganism {
     {
       body = new Body_t(_p);
       body->SetDetachOnRepro(detach_on_birth);
-      body->SetBodyLabel(emp::BODY_LABEL::ORGANISM);
-      body->AddDestructionCallback([this]() { this->has_body = false; });
-      body->AddCollisionCallback([this](emp::Body2D_Base *other) { this->HandleCollision(other); } );
+      body->RegisterDestructionCallback([this]() { this->has_body = false; });
+      //body->RegisterCollisionCallback([this](emp::Body2D_Base *other) { this->CollisionCallback(other); } );
       body->SetMaxPressure(membrane_strengh);
       has_body = true;
     }
@@ -47,9 +46,8 @@ class SimpleOrganism {
     {
       body = new Body_t(other.GetConstBody().GetPerimeter());
       body->SetDetachOnRepro(other.GetDetachOnBirth());
-      body->SetBodyLabel(emp::BODY_LABEL::ORGANISM);
-      body->AddDestructionCallback([this]() { this->has_body = false; });
-      body->AddCollisionCallback([this](emp::Body2D_Base *other) { this->HandleCollision(other); } );
+      body->RegisterDestructionCallback([this]() { this->has_body = false; });
+      //body->RegisterCollisionCallback([this](emp::Body2D_Base *other) { this->CollisionCallback(other); } );
       body->SetMaxPressure(membrane_strengh);
       has_body = true;
     }
@@ -91,18 +89,8 @@ class SimpleOrganism {
     }
 
     // This is called when this organism's body is involved in a collision.
-    void HandleCollision(emp::Body2D_Base *other_body) {
-      std::cout << "Handling collision from org.." << std::endl;
-      if (other_body->GetBodyLabel() == emp::BODY_LABEL::RESOURCE) {
-        // Attempt to consume!
-        // TODO: need to be able to calculate probability of consumption based on resource
-        std::cout << "Organism consuming resource..." << std::endl;
-        std::cout << "resource value: " << static_cast<SimpleResourceBody *>(other_body)->GetOwner()->GetValue() << std::endl;
-        // Mark collision as resolved
-        body->ResolveCollision();
-        other_body->ResolveCollision();
-      }
-    }
+    // void CollisionCallback(emp::Body2D_Base *other_body) {
+    // }
 
     bool operator==(const SimpleOrganism &other) const {
       /* Do these organisms have the same genotype? */

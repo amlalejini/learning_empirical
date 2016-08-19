@@ -34,7 +34,7 @@ class PopulationManager_SimplePhysics {
     using Org_t = ORG;                  // Just here for consistency
     using Resource_t = SimpleResource;
     using PhysicsBody_t = CircleBody2D;
-    using Physics_t = SimplePhysics2D<PhysicsBody_t>;
+    using Physics_t = SimplePhysics2D<SimpleResource, ORG>;
     // TODO
     Physics_t physics;
     emp::vector<Org_t*> population;
@@ -55,6 +55,10 @@ class PopulationManager_SimplePhysics {
 
     double movement_noise;
 
+    // Useful things to not have to look up all of the time.
+    static constexpr int RESOURCE_TYPE_ID = Physics_t::template GetTypeID<Resource_t>();
+    static constexpr int ORG_TYPE_ID = Physics_t::template GetTypeID<ORG>();
+
   public:
     PopulationManager_SimplePhysics()
       : physics(),
@@ -67,7 +71,9 @@ class PopulationManager_SimplePhysics {
         resource_radius(1.0),
         resource_value(1.0),
         movement_noise(0.1)
-    { ; }
+    {
+      physics.RegisterCollisionCallback([this](PhysicsBody_t *b1, PhysicsBody_t *b2) { this->PhysicsCollisionCallback(b1, b2); });
+    }
 
     ~PopulationManager_SimplePhysics() { ; }
 
@@ -94,14 +100,14 @@ class PopulationManager_SimplePhysics {
     int AddOrg(Org_t *new_org) {
       int pos = this->GetSize();
       population.push_back(new_org);
-      physics.AddOrgBody(new_org->GetBodyPtr());
+      physics.AddOrgBody(new_org, new_org->GetBodyPtr());
       return pos;
     }
 
     int AddResource(Resource_t *new_res) {
       int pos = this->GetNumResources();
       resources.push_back(new_res);
-      physics.AddResourceBody(new_res->GetBodyPtr());
+      physics.AddResourceBody(new_res, new_res->GetBodyPtr());
       return pos;
     }
 
@@ -129,6 +135,25 @@ class PopulationManager_SimplePhysics {
       this->movement_noise = movement_noise;
       // Config the physics.
       physics.ConfigPhysics(width, height, random_ptr, surface_friction);
+    }
+
+    // Physics collision callback (called when )
+    void PhysicsCollisionCallback(PhysicsBody_t *body1, PhysicsBody_t *body2) {
+      if (body1->GetOwnerID() == physics.template GetTypeID<Resource_t>()) std::cout << "Body1 is a Resource." << std::endl;
+      if (body2->GetOwnerID() == physics.template GetTypeID<Resource_t>()) std::cout << "Body2 is a Resource." << std::endl;
+      if (body1->GetOwnerID() == physics.template GetTypeID<ORG>()) std::cout << "Body1 is an Org." << std::endl;
+      if (body2->GetOwnerID() == physics.template GetTypeID<ORG>()) std::cout << "Body2 is an Org." << std::endl;
+
+      if (body1->GetOwnerID() == RESOURCE_TYPE_ID && body2->GetOwnerID() == ORG_TYPE_ID) {
+        std::cout << "Special case! bod1 is res & bod2 is org" << std::endl;
+      } else if (body1->GetOwnerID() == ORG_TYPE_ID && body2->GetOwnerID() == RESOURCE_TYPE_ID) {
+        std::cout << "Special case! bod1 is org & bod2 is res" << std::endl;
+      } else {
+        return;
+      }
+
+
+
     }
 
     // Progress time by one step.

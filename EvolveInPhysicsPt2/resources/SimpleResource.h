@@ -13,19 +13,19 @@ class SimpleResourceBody;
 
 // TODO: What's the best way to do this?
 // Can I do a 'bodywrapper' class somehow? Can I make the base class a template?
-class SimpleResourceBody : public emp::CircleBody2D {
-  private:
-    SimpleResource *owner;
-  public:
-    using emp::CircleBody2D::CircleBody2D;
-    void SetOwner(SimpleResource *resource) { owner = resource; }
-    SimpleResource * GetOwner() { return owner; }
-
-};
+// class SimpleResourceBody : public emp::CircleBody2D {
+//   private:
+//     SimpleResource *owner;
+//   public:
+//     using emp::CircleBody2D::CircleBody2D;
+//     void SetOwner(SimpleResource *resource) { owner = resource; }
+//     SimpleResource * GetOwner() { return owner; }
+//
+// };
 
 class SimpleResource {
   private:
-    using Body_t = SimpleResourceBody;
+    using Body_t = emp::CircleBody2D;
     Body_t* body;                     // An organism/resource's body may be deleted by outside forces.
     double value;
     double age;
@@ -37,10 +37,8 @@ class SimpleResource {
     {
       body = new Body_t(_p);
       body->SetDetachOnRepro(true);
-      body->SetBodyLabel(emp::BODY_LABEL::RESOURCE);
-      body->AddDestructionCallback([this]() { this->has_body = false; });
+      body->RegisterDestructionCallback([this]() { this->has_body = false; });
       body->SetMaxPressure(99999); // Big number.
-      body->SetOwner(this);
       has_body = true;
       this->value = value;
     }
@@ -51,10 +49,8 @@ class SimpleResource {
     {
       body = new Body_t(other.GetConstBody().GetPerimeter());
       body->SetDetachOnRepro(other.GetConstBody().GetDetachOnRepro());
-      body->SetBodyLabel(emp::BODY_LABEL::RESOURCE);
-      body->AddDestructionCallback([this]() { this->has_body = false; });
+      body->RegisterDestructionCallback([this]() { this->has_body = false; });
       body->SetMaxPressure(99999);
-      body->SetOwner(this);
       has_body = true;
     }
 

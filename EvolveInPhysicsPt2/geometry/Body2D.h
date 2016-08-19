@@ -39,9 +39,6 @@
 
 namespace emp {
 
-  // QUESTION: how can I make this extensible for the future? Macro magic or something?
-  enum class BODY_LABEL { DEFAULT, ORGANISM, RESOURCE };
-
   class Body2D_Base {
   protected:
     // Bodies can be linked in several ways.
@@ -69,7 +66,6 @@ namespace emp {
       ~BodyLink() { ; }
     };
 
-    BODY_LABEL body_label;
     double birth_time;        // At what time point was this organism born?
     Angle orientation;        // Which way is body facing?
     Point<double> velocity;   // Speed and direction of movement
@@ -85,13 +81,19 @@ namespace emp {
     Point<double> total_abs_shift;  // Total absolute-value of shifts (to calculate pressure)
     double pressure;                // Current pressure on this body.
     double max_pressure;            // Max amount of pressure this body can withstand.
-    Signal<> destruction_signal;          // Triggered on body destruction.
-    Signal<Body2D_Base*> collision_signal; // Triggered on collision with another body.
+    Signal<> destruction_sig;          // Triggered on body destruction.
+    Signal<Body2D_Base*> collision_sig; // Triggered on collision with another body.
     bool is_colliding;   // Is currently colliding?
 
+    void* owner_ptr;
+    int owner_id;        // -1 means no owner has been assigned.
+
   public:
-    Body2D_Base() : body_label(BODY_LABEL::DEFAULT), birth_time(0.0), mass(1.0), inv_mass(1 / mass), color_id(0), repro_count(0), detach_on_repro(true), growth_rate(1.0), pressure(0), max_pressure(1.0), is_colliding(false) { ; }
-    ~Body2D_Base() { destruction_signal.Trigger(); }
+    Body2D_Base() : birth_time(0.0), mass(1.0), inv_mass(1 / mass), color_id(0), repro_count(0), detach_on_repro(true), growth_rate(1.0), pressure(0), max_pressure(1.0), is_colliding(false), owner_id(-1) { ; }
+    virtual ~Body2D_Base() { destruction_sig.Trigger(); }
+
+    // All physics bodies must indicate that they are indeed physics bodies.
+    static constexpr bool emp_is_physics_body = true;
 
     double GetBirthTime() const { return birth_time; }
     const Angle & GetOrientation() const { return orientation; }
@@ -107,24 +109,26 @@ namespace emp {
     double GetPressure() const { return pressure; }
     double GetMaxPressure() const { return max_pressure; }
     double GetGrowthRate() const { return growth_rate; }
-    BODY_LABEL GetBodyLabel() const { return body_label; }
+    int GetOwnerID() const { return owner_id; }
+    void* GetOwnerPtr() { return owner_ptr; }
+    virtual bool ExceedsStressThreshold() const { return pressure > max_pressure; }
 
     void SetBirthTime(double in_time) { birth_time = in_time; }
     void SetMaxPressure(double mp) { max_pressure = mp; }
     void SetDetachOnRepro(bool detach) { detach_on_repro = detach; }
     void SetGrowthRate(double rate) { growth_rate = rate; }
     void SetColorID(uint32_t in_id) { color_id = in_id; }
-    void SetBodyLabel(BODY_LABEL label) { body_label = label; }
-    void AddDestructionCallback(std::function<void()> callback) {
-      destruction_signal.AddAction(callback);
+    void SetOwner(void* owner, int id) { owner_ptr = owner; owner_id = id; }
+    void RegisterDestructionCallback(std::function<void()> callback) {
+      destruction_sig.AddAction(callback);
     }
-    void AddCollisionCallback(std::function<void(Body2D_Base*)> callback) {
-      collision_signal.AddAction(callback);
+    void RegisterCollisionCallback(std::function<void(Body2D_Base*)> callback) {
+      collision_sig.AddAction(callback);
     }
     // Called on collision. Set is colliding flag.
     void TriggerCollision(Body2D_Base *other_body) {
       is_colliding = true;
-      collision_signal.Trigger(other_body);
+      collision_sig.Trigger(other_body);
     }
     // Call to signal that the current collision has been resolved.
     void ResolveCollision() {

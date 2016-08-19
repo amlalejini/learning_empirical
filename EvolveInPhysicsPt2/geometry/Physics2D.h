@@ -20,12 +20,18 @@
 #include "tools/Random.h"
 #include "tools/assert.h"
 #include "tools/functions.h"
+#include "tools/meta.h"
 
+// IDEA: create surface for each type of BODY_TYPES? Then I can:
+//  AddBody(OWNER BODY) { getbodyid() getownerid(); surface_set[bodyid].addbody(body);}
+// TODO: eventually make number of surfaces generic
 namespace emp {
 
   // Simple physics with CircleBody2D bodies.
-  template <typename BODY_TYPE> class SimplePhysics2D {
+  template <typename... OWNER_TYPES>
+  class SimplePhysics2D {
     protected:
+      using BODY_TYPE = CircleBody2D;
       using OrgSurface_t = Surface2D<BODY_TYPE>;
       using ResourceSurface_t = Surface2D<BODY_TYPE>;
 
@@ -36,6 +42,9 @@ namespace emp {
       Point<double> *max_pos;   // Max position across all surfaces.
       bool configured;          // Have the physics been configured yet?
       emp::Random *random_ptr;
+
+      Signal<BODY_TYPE *, BODY_TYPE *> collision_sig;
+      Signal<> update_sig;
 
     public:
       SimplePhysics2D()
@@ -53,6 +62,13 @@ namespace emp {
         delete resource_surface;
       }
 
+      // Call GetTypeID<type_name>() to get the ID associated with owner type type_name.
+      template<typename T>
+      constexpr static int GetTypeID() { return get_type_index<T, OWNER_TYPES...>(); }
+      // Call GetTypeID(owner) to get the ID associated with 'owner'.
+      template <typename T>
+      constexpr static int GetTypeID(const T &) { return get_type_index<T, OWNER_TYPES...>(); }
+
       const OrgSurface_t & GetOrgSurface() const { emp_assert(configured); return *org_surface; }
       const ResourceSurface_t & GetResourceSurface() const { emp_assert(configured); return *resource_surface; }
       const emp::vector<Surface2D<BODY_TYPE> *> & GetSurfaceSet() const { return surface_set; }
@@ -67,6 +83,7 @@ namespace emp {
         }
         return *this;
       }
+
       // Config needs to be able to be called multiple times..
       // Configure physics. This must be called if default constructor was
       // used when creating this.
@@ -87,41 +104,70 @@ namespace emp {
         configured = true;
       }
 
-      SimplePhysics2D & AddOrgBody(BODY_TYPE * in_body) {
-        emp_assert(configured && (in_body->GetBodyLabel() == BODY_LABEL::ORGANISM));
+      void RegisterCollisionCallback(std::function<void(BODY_TYPE *, BODY_TYPE *)> callback) {
+        collision_sig.AddAction(callback);
+      }
+
+      void RegisterUpdateCallback(std::function<void()> callback) {
+        update_sig.AddAction(callback);
+      }
+
+      template<typename OWNER>
+      SimplePhysics2D & AddOrgBody(OWNER * owner, BODY_TYPE * in_body) {
+        emp_assert(configured);
+        in_body->SetOwner(owner, GetTypeID(*owner));
         org_surface->AddBody(in_body);
         return *this;
       }
 
-      SimplePhysics2D & AddResourceBody(BODY_TYPE * in_body) {
-        emp_assert(configured && (in_body->GetBodyLabel() == BODY_LABEL::RESOURCE));
+      SimplePhysics2D & AddOrgBody(BODY_TYPE * in_body) {
+        emp_assert(configured);
+        in_body->SetOwner(nullptr, -1);
+        org_surface->AddBody(in_body);
+        return *this;
+      }
+
+      template<typename OWNER>
+      SimplePhysics2D & AddResourceBody(OWNER * owner, BODY_TYPE * in_body) {
+        emp_assert(configured);
+        in_body->SetOwner(owner, GetTypeID(*owner));
         resource_surface->AddBody(in_body);
         return *this;
       }
 
+      SimplePhysics2D & AddResourceBody(BODY_TYPE * in_body) {
+        emp_assert(configured);
+        in_body->SetOwner(nullptr, -1);
+        resource_surface->AddBody(in_body);
+        return *this;
+      }
 
-      //TODO: there has to be a way to make this better.
+      // Called on collision between two bodies.
       bool CollideBodies(BODY_TYPE *body1, BODY_TYPE *body2) {
         emp_assert(configured);
         // If bodies are linked, no collision.
         if (body1->IsLinked(*body2)) return false;
-        const Point<double> dist = body1->GetCenter() - body2->GetCenter();
-        const double sq_pair_dist = dist.SquareMagnitude();
+        Point<double> dist = body1->GetCenter() - body2->GetCenter();
+        double sq_pair_dist = dist.SquareMagnitude();
         const double radius_sum = body1->GetRadius() + body2->GetRadius();
         const double sq_min_dist = radius_sum * radius_sum;
-        // If there was no collision, return false.
+        // If bodies aren't touching, no collision.
         if (sq_pair_dist >= sq_min_dist) return false;
-        // Collision! Trigger body collision signals.
+        // Collision! Trigger body collision signals and physics collision signal.
         body1->TriggerCollision(body2);
         body2->TriggerCollision(body1);
-        // TODO: how should I determine if I'm done resolving collision or if I should continue with default physics response.
-        //  TODO: QUESTION: is this approach reasonable? Better approaches?
-        if (body1->IsColliding() || body2->IsColliding()) {
+        collision_sig.Trigger(body1, body2);
+        // TODO: I could just have a one-sided collision resolution for anyone who's collision has not been resolved when other one has.
+        if (body1->IsColliding() && body2->IsColliding()) {
           // Default collision resolution.
+
           // If the shapes are on top of each other, we have a problem. Shift one!
           if (sq_pair_dist == 0.0) {
             body2->Translate(Point<double>(0.01, 0.01));
+            dist = body1->GetCenter() - body2->GetCenter(); // Update dist
+            sq_pair_dist = dist.SquareMagnitude();
           }
+
           // Re-adjust position to remove overlap.
           const double true_dist = sqrt(sq_pair_dist);
           const double overlap_dist = ((double) radius_sum) - true_dist;
@@ -212,46 +258,37 @@ namespace emp {
 
       // Progress physics by a single time step.
       void Update() {
-        std::cout << "Physics update!" << std::endl;
         emp_assert(configured);
-        auto &org_body_set = org_surface->GetBodySet();
-        auto &resource_body_set = resource_surface->GetBodySet();
-        // Update organism bodies.
-        double f = org_surface->GetFriction();
-        for (auto *cur_body : org_body_set) {
-          cur_body->BodyUpdate(f);
-        }
-        // Update resource bodies.
-        f = resource_surface->GetFriction();
-        for (auto *cur_body : resource_body_set) {
-          cur_body->BodyUpdate(f);
+        update_sig.Trigger(); // TODO: QUESTION: should we signal this at the beginning of an update? or at the end?
+
+        // Update all bodies.
+        for (auto *surface : surface_set) {
+          const double f = surface->GetFriction();
+          for (auto *cur_body : surface->GetBodySet()) {
+            cur_body->BodyUpdate(f);
+          }
         }
 
         // Test for and handle collisions.
         TestCollisions();
 
-        // Body removal/post-collision updates: Are there any bodies that have
-        // been physically destroyed?
-        // * Organism body removal:
-        int cur_size = (int) org_body_set.size();
-        int cur_id = 0;
-        while (cur_id < cur_size) {
-          emp_assert(org_body_set[cur_id] != nullptr);
-          const double cur_pressure = org_body_set[cur_id]->GetPressure();
-          const double pop_pressure = org_body_set[cur_id]->GetMaxPressure();
-          if (cur_pressure > pop_pressure) {  // If pressure is too high, burst the cell!
-            delete org_body_set[cur_id];      // Delete the burst cell.
-            cur_size--;                       // Indicate 1 fewer cell in body set.
-            org_body_set[cur_id] = org_body_set[cur_size];
-          } else {
-            cur_id++;
+        // Test bodies for stress-induced removal.
+        for (auto *surface : surface_set) {
+          auto &surface_body_set = surface->GetBodySet();
+          int cur_size = (int) surface_body_set.size();
+          int cur_id = 0;
+          while (cur_id < cur_size) {
+            emp_assert(surface_body_set[cur_id] != nullptr);
+            if (surface_body_set[cur_id]->ExceedsStressThreshold()) {
+              delete surface_body_set[cur_id];
+              cur_size--;
+              surface_body_set[cur_id] = surface_body_set[cur_size];
+            } else {
+              cur_id++;
+            }
           }
+          surface_body_set.resize(cur_size);
         }
-        org_body_set.resize(cur_size);
-        // * Resource body removal: For now, resources can't be popped.
-        // cur_size = (int) resource_body_set.size();
-        // cur_id = 0;
-
       }
 
       emp::vector<BODY_TYPE *> & GetOrgBodySet() {

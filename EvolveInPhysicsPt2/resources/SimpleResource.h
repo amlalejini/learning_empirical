@@ -55,7 +55,7 @@ class SimpleResource {
     }
 
     ~SimpleResource() {
-      if (has_body) delete body;
+      if (has_body) delete body; 
     }
 
     double GetValue() const { return value; }

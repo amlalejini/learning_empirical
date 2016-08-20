@@ -66,10 +66,8 @@ namespace emp {
 
     // Remove a body. TODO: test this function
     void RemoveBody(BODY_TYPE *body) {
-      std::cout << "RemoveBody() [body_set size: "<< body_set.size() << "]" << std::endl;
       body_set.erase(std::remove_if(body_set.begin(), body_set.end(),
                                     [body](BODY_TYPE *body2){ return body == body2; }));
-
     }
 
     // Clear all bodies on the surface.

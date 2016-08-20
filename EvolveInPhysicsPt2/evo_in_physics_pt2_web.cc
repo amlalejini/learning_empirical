@@ -313,7 +313,6 @@ class EvoInPhysicsInterface {
 
     // Call to initialize a new experiment with current config values.
     void InitializeExperiment() {
-      std::cout << "InitializeExperiment!" << std::endl;
       // Setup the world.
       if (world != nullptr) delete world;
       if (random != nullptr) delete random; // World does not own *random. Delete it.
@@ -332,7 +331,6 @@ class EvoInPhysicsInterface {
     }
 
     void ResetEvolution() {
-      std::cout << "Reset Evolution!" << std::endl;
       // Purge the world!
       world->Clear();
       world->update = 0;
@@ -342,32 +340,29 @@ class EvoInPhysicsInterface {
       Organism_t ancestor(emp::Circle<double>(mid_point, org_radius), genome_length, detach_on_birth);
       // Randomize ancestor genome.
       for (int i = 0; i < ancestor.genome.GetSize(); i++) {
-        if (random->P(0.05)) ancestor.genome[i] = !ancestor.genome[i];
+        if (random->P(0.5)) ancestor.genome[i] = !ancestor.genome[i];
       }
-      ancestor.SetColorID();
       // TODO: make mass dependent on density
       ancestor.GetBody().SetMass(10.0);
       ancestor.SetMembraneStrength(organism_membrane_strength);
       ancestor.SetBirthTime(-1);
-      world->Insert(ancestor, 1);
-      // For testing:
-      for (int i = 0; i < 10; i++) {
-        const emp::Point<double> loc(random->GetInt(world_width), random->GetInt(world_height));
-        Organism_t orgie(emp::Circle<double>(loc, org_radius), genome_length, detach_on_birth);
-        orgie.SetColorID();
-        orgie.GetBody().SetMass(10.0);
-        orgie.SetMembraneStrength(organism_membrane_strength);
-        orgie.SetBirthTime(-1);
-        world->Insert(orgie);
-      }
+      world->Insert(ancestor);
+      // // For testing:
+      // for (int i = 0; i < 10; i++) {
+      //   const emp::Point<double> loc(random->GetInt(world_width), random->GetInt(world_height));
+      //   Organism_t orgie(emp::Circle<double>(loc, org_radius), genome_length, detach_on_birth);
+      //   orgie.SetColorID();
+      //   orgie.GetBody().SetMass(10.0);
+      //   orgie.SetMembraneStrength(organism_membrane_strength);
+      //   orgie.SetBirthTime(-1);
+      //   world->Insert(orgie);
+      // }
 
     }
 
     // Single animation step for this interface.
     void Animate(const web::Animate &anim) {
-      std::cout << "Animate!" << std::endl;
       world->Update();
-      std::cout << world->update << std::endl;
       // Draw
       web::Draw(world_view.Canvas("simple-world-canvas"), world->popM.GetPhysics().GetSurfaceSet(), emp::GetHueMap(360));
       stats_view.Redraw();
@@ -375,7 +370,6 @@ class EvoInPhysicsInterface {
 
     // Called on start/stop button press.
     bool DoToggleRun() {
-      std::cout << "Do Toggle Run!" << std::endl;
       anim.ToggleActive();
       // Grab buttons to manipulate:
       auto start_but = dashboard.Button("start_but");
@@ -397,7 +391,6 @@ class EvoInPhysicsInterface {
 
     // Called on reset button press and when initializing the experiment.
     bool DoReset() {
-      std::cout << "Do Reset!" << std::endl;
       ResetEvolution();
       web::Draw(world_view.Canvas("simple-world-canvas"), world->popM.GetPhysics().GetSurfaceSet(), emp::GetHueMap(360));
       stats_view.Redraw();
@@ -406,7 +399,6 @@ class EvoInPhysicsInterface {
 
     // Called on step button press.
     bool DoStep() {
-      std::cout << "Do Step!" << std::endl;
       emp_assert(anim.GetActive() == false);
       anim.Step();
       return true;
@@ -414,7 +406,6 @@ class EvoInPhysicsInterface {
 
     // Called on run experiment button press (from config exp page).
     bool DoRunExperiment() {
-      std::cout << "Do Run Experiment!" << std::endl;
       // Collect parameter values.
       UpdateParams();
       // Initialize the experiment.
@@ -426,8 +417,15 @@ class EvoInPhysicsInterface {
 
     // Called on reconfigure exp button press (from run exp page).
     bool DoReconfigureExperiment() {
-      std::cout << "Do Reconfigure Experiment!" << std::endl;
       // Set page mode to CONFIG.
+      if (anim.GetActive()) {
+        anim.ToggleActive();
+        auto start_but = dashboard.Button("start_but");
+        auto step_but = dashboard.Button("step_but");
+        start_but.Label(PLAY_GLYPH);
+        start_but.SetAttr("class", "btn btn-success");
+        step_but.Disabled(false);
+      }
       page_mode = ChangePageView(PageMode::CONFIG);
       return true;
     }

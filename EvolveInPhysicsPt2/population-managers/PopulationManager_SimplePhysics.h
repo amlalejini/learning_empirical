@@ -6,6 +6,7 @@
 #define POPULATION_MANAGER_SIMPLE_PHYSICS_H
 
 #include <iostream>
+#include <limits>
 
 #include "../geometry/Physics2D.h"
 #include "../resources/SimpleResource.h"
@@ -23,6 +24,8 @@
 //    - Resource placement
 //    - Population structure
 /////////////////////////
+// TODO: Speed up body removal when removing body owner.
+// TODO: make dummy default collision callback, allow users to register collision callbacks to be registered with physics.
 
 namespace emp {
 namespace evo {
@@ -72,6 +75,7 @@ class PopulationManager_SimplePhysics {
         resource_value(1.0),
         movement_noise(0.1)
     {
+      // TODO: allow collision callbacks (multiple?) to be registered.
       physics.RegisterCollisionCallback([this](PhysicsBody_t *b1, PhysicsBody_t *b2) { this->PhysicsCollisionCallback(b1, b2); });
     }
 
@@ -139,21 +143,38 @@ class PopulationManager_SimplePhysics {
 
     // Physics collision callback (called when )
     void PhysicsCollisionCallback(PhysicsBody_t *body1, PhysicsBody_t *body2) {
-      if (body1->GetOwnerID() == physics.template GetTypeID<Resource_t>()) std::cout << "Body1 is a Resource." << std::endl;
-      if (body2->GetOwnerID() == physics.template GetTypeID<Resource_t>()) std::cout << "Body2 is a Resource." << std::endl;
-      if (body1->GetOwnerID() == physics.template GetTypeID<ORG>()) std::cout << "Body1 is an Org." << std::endl;
-      if (body2->GetOwnerID() == physics.template GetTypeID<ORG>()) std::cout << "Body2 is an Org." << std::endl;
-
-      if (body1->GetOwnerID() == RESOURCE_TYPE_ID && body2->GetOwnerID() == ORG_TYPE_ID) {
-        std::cout << "Special case! bod1 is res & bod2 is org" << std::endl;
-      } else if (body1->GetOwnerID() == ORG_TYPE_ID && body2->GetOwnerID() == RESOURCE_TYPE_ID) {
-        std::cout << "Special case! bod1 is org & bod2 is res" << std::endl;
-      } else {
-        return;
+      const bool is_resource = (body1->GetOwnerID() == RESOURCE_TYPE_ID || body2->GetOwnerID() == RESOURCE_TYPE_ID);
+      const bool is_org = (body1->GetOwnerID() == ORG_TYPE_ID || body2->GetOwnerID() == ORG_TYPE_ID);
+      if (is_resource && is_org) {
+        // This is the special case where a resource body and org body collide.
+        Resource_t *res;
+        Org_t *org;
+        if (body1->GetOwnerID() == ORG_TYPE_ID) {
+          org = static_cast<Org_t*>(body1->GetOwnerPtr());
+          res = static_cast<Resource_t*>(body2->GetOwnerPtr());
+        } else {
+          org = static_cast<Org_t*>(body2->GetOwnerPtr());
+          res = static_cast<Resource_t*>(body1->GetOwnerPtr());
+        }
+        // If organism manages to eat resource and they are not already linked,
+        // add a link org--->res.
+        if (random_ptr->P(org->GetResourceConsumptionProb(*res))) {
+          // Organism consumes resource!
+          if (!org->GetBody().IsLinked(res->GetBody())) {
+            double strength;
+            // TODO: repeated math, can speed up!
+            const double sq_pair_dist = (body1->GetCenter() - body2->GetCenter()).SquareMagnitude();
+            const double radius_sum = body1->GetRadius() + body2->GetRadius();
+            const double sq_min_dist = radius_sum * radius_sum;
+            // strength is a function of how close the two organisms are
+            sq_pair_dist == 0.0 ? strength = std::numeric_limits<double>::max() : strength = sq_min_dist / sq_pair_dist;
+            // Add link FROM org TO resource.
+            org->GetBody().AddLink(LINK_TYPE::CONSUME_RESOURCE, res->GetBody(), sqrt(sq_pair_dist), sqrt(sq_min_dist), strength);
+          }
+          body1->ResolveCollision();
+          body2->ResolveCollision();
+        }
       }
-
-
-
     }
 
     // Progress time by one step.
@@ -168,21 +189,37 @@ class PopulationManager_SimplePhysics {
         Org_t *org = population[cur_id];
         // Remove organisms with no body.
         if (!org->HasBody()) {
-          std::cout << "This org has no body!" << std::endl;
           delete org;
           cur_size--;
           population[cur_id] = population[cur_size];
           continue;
         }
         // Organism has body, proceed.
-        // TODO: Feed e'body.
-        // TODO: Reproduction.
+        if (!org->GetBody().ExceedsStressThreshold() && org->GetEnergy() >= cost_of_repro) {
+          auto *baby_org = org->Reproduce(random_ptr, point_mutation_rate, cost_of_repro);
+          baby_org->GetBody().SetMass(10.0);
+          new_organisms.push_back(baby_org);
+        }
         // Add some noise to movement.
         org->GetBody().IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(movement_noise));
         cur_id++;
       }
       population.resize(cur_size);
-
+      // Add new offspring to population.
+      int total_size = (int)(population.size() + new_organisms.size());
+      if (total_size > max_pop_size) {
+        // Cull population to make room for new organisms.
+        int new_size = ((int) population.size()) - (total_size - max_pop_size);
+        emp::Shuffle<Org_t *>(*random_ptr, population, new_size);
+        for (int i = new_size; i < (int) population.size(); i++) {
+          physics.RemoveOrgBody(population[i]->GetBodyPtr());
+          delete population[i];
+        }
+        population.resize(new_size);
+      }
+      for (auto *new_organism : new_organisms) {
+        AddOrg(new_organism);
+      }
       // Manage resources.
       cur_size = GetNumResources();
       cur_id = 0;
@@ -193,9 +230,39 @@ class PopulationManager_SimplePhysics {
           delete resource;
           cur_size--;
           resources[cur_id] = resources[cur_size];
-          continue;
+          continue; // Done handling this resource.
         }
         // Resource has body, proceed.
+        // Grab consumption links TO this resource.
+        auto consumption_links = resource->GetBody().GetLinksToByType(LINK_TYPE::CONSUME_RESOURCE);
+        // Is anyone trying to consume this resource?
+        if ((int) consumption_links.size() > 0) {
+          // Find the strongest link!
+          auto *max_link = consumption_links[0];
+          for (auto *link : consumption_links) {
+            if (link->link_strength > max_link->link_strength) max_link = link;
+          }
+          // Feed resource to the strongest link (if it's an organism)!
+          if (max_link->from->GetOwnerID() == ORG_TYPE_ID) {
+            Org_t *hungry_org = static_cast<Org_t*>(max_link->from->GetOwnerPtr());
+            hungry_org->ConsumeResource(*resource);
+            // Remove the consumed resource.
+            // TODO: this is inefficient. Should work to make this easier. (flags of some sort?)
+            physics.RemoveResourceBody(resource->GetBodyPtr());
+            delete resource;
+            cur_size--;
+            resources[cur_id] = resources[cur_size];
+            continue; // Done handling this resource.
+          }
+        }
+        // Check aging.
+        if (resource->IncAge() > max_resource_age) {
+          physics.RemoveResourceBody(resource->GetBodyPtr());
+          delete resource;
+          cur_size--;
+          resources[cur_id] = resources[cur_size];
+          continue;
+        }
         // Add some noise to movement.
         resource->GetBody().IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(movement_noise));
         cur_id++;
@@ -212,10 +279,7 @@ class PopulationManager_SimplePhysics {
         new_resource->GetBody().SetMass(1);
         AddResource(new_resource);
       }
-
     }
-
-
 };
 
 }

@@ -39,16 +39,18 @@
 
 namespace emp {
 
+  // TODO: is this still the best way to do this? Also, probably should not be
+  // just sitting in the emp namespace.
+  // Bodies can be linked in several ways.
+  // DEFAULT -> Joined together with no extra meaning
+  // REPRODUCTION -> "from" is gestating "to"
+  // ATTACK -> "from" is trying to eat "to"
+  // PARASITE -> "from" is stealing resources from "to"
+  // CONSUME_RESOURCE -> "from" is eating "to" where "from" is an organism and "to" is a resource.
+  enum class LINK_TYPE { DEFAULT, REPRODUCTION, ATTACK, PARASITE, CONSUME_RESOURCE };
+
   class Body2D_Base {
   protected:
-    // Bodies can be linked in several ways.
-    // DEFAULT -> Joined together with no extra meaning
-    // REPRODUCTION -> "from" is gestating "to"
-    // ATTACK -> "from" is trying to eat "to"
-    // PARASITE -> "from" is stealing resources from "to"
-    // CONSUME_RESOURCE -> "from" is eating "to" where "from" is an organism and "to" is a resource.
-    enum class LINK_TYPE { DEFAULT, REPRODUCTION, ATTACK, PARASITE, CONSUME_RESOURCE };
-
     template <typename BODY_TYPE>
     struct BodyLink {
       LINK_TYPE type;       // DEFAULT, REPRODUCTION, ATTACK, PARASITE
@@ -201,24 +203,25 @@ namespace emp {
     void Translate(const Point<double> & t) { perimeter.Translate(t); }
 
     // Creating, testing, and unlinking other organisms
-    bool IsLinkedFrom(const CircleBody2D & link_org) const {
-      for (auto * cur_link : from_links) if (cur_link->to == &link_org) return true;
+    bool IsLinkedFrom(const CircleBody2D & link_body) const {
+      for (auto * cur_link : from_links) if (cur_link->to == &link_body) return true;
       return false;
     }
-    bool IsLinkedTo(const CircleBody2D & link_org) const { return link_org.IsLinkedFrom(*this); }
-    bool IsLinked(const CircleBody2D & link_org) const {
-      return IsLinkedFrom(link_org) || IsLinkedTo(link_org);
+    bool IsLinkedTo(const CircleBody2D & link_body) const { return link_body.IsLinkedFrom(*this); }
+    bool IsLinked(const CircleBody2D & link_body) const {
+      return IsLinkedFrom(link_body) || IsLinkedTo(link_body);
     }
 
     int GetLinkCount() const { return (int) (from_links.size() + to_links.size()); }
 
-    void AddLink(LINK_TYPE type, CircleBody2D & link_org, double cur_dist, double target_dist, double link_strength = 0) {
-      emp_assert(!IsLinked(link_org));  // Don't link twice!
+    // Add link FROM this TO link_body.
+    void AddLink(LINK_TYPE type, CircleBody2D & link_body, double cur_dist, double target_dist, double link_strength = 0) {
+      emp_assert(!IsLinked(link_body));  // Don't link twice!
 
       // Build connections in both directions.
-      auto * new_link = new BodyLink<CircleBody2D>(type, this, &link_org, cur_dist, target_dist, link_strength);
+      auto * new_link = new BodyLink<CircleBody2D>(type, this, &link_body, cur_dist, target_dist, link_strength);
       from_links.push_back(new_link);
-      link_org.to_links.push_back(new_link);
+      link_body.to_links.push_back(new_link);
     }
 
     void RemoveLink(BodyLink<CircleBody2D> * link) {
@@ -251,6 +254,22 @@ namespace emp {
       emp_assert(IsLinked(link_org));
       for (auto * link : from_links) if ( link->to == &link_org) return *link;
       return link_org.FindLink(*this);
+    }
+
+    emp::vector<BodyLink<CircleBody2D> *> GetLinksToByType(LINK_TYPE link_type) {
+      emp::vector<BodyLink<CircleBody2D> *> links;
+      for (auto *link : this->to_links) {
+        if (link->type == link_type) links.push_back(link);
+      }
+      return links;
+    }
+
+    emp::vector<BodyLink<CircleBody2D> *> GetLinksFromByType(LINK_TYPE link_type) {
+      emp::vector<BodyLink<CircleBody2D> *> links;
+      for (auto *link : this->from_links) {
+        if (link->type == link_type) links.push_back(link);
+      }
+      return links;
     }
 
     double GetLinkDist(const CircleBody2D & link_org) const {
@@ -287,6 +306,8 @@ namespace emp {
     // * If a body is not at its target radius, grow it or shrink it, as needed.
     // * Move body by its velocity.
     // * Reduce velocity by based on friction.
+    // TODO: refactor this function
+    //  * growth rate doesn't make sense to use for updating link distances
     void BodyUpdate(double friction, double change_factor) {
       // Test if this body needs to grow or shrink.
       if ((int) target_radius > (int) GetRadius()) SetRadius(GetRadius() + change_factor);
@@ -350,7 +371,6 @@ namespace emp {
           // If two organisms are on top of each other... shift one.
           Translate(emp::Point<double>(0.01, 0.01));
         }
-
         // Figure out how much each oragnism should move so that they will be properly spaced.
         const double start_dist = GetAnchor().Distance(link->to->GetAnchor());
         const double link_dist = link->cur_dist;

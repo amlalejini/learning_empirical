@@ -127,6 +127,12 @@ namespace emp {
         return *this;
       }
 
+      SimplePhysics2D & RemoveOrgBody(BODY_TYPE * in_body) {
+        emp_assert(configured);
+        org_surface->RemoveBody(in_body);
+        return *this;
+      }
+
       template<typename OWNER>
       SimplePhysics2D & AddResourceBody(OWNER * owner, BODY_TYPE * in_body) {
         emp_assert(configured);
@@ -139,6 +145,12 @@ namespace emp {
         emp_assert(configured);
         in_body->SetOwner(nullptr, -1);
         resource_surface->AddBody(in_body);
+        return *this;
+      }
+
+      SimplePhysics2D & RemoveResourceBody(BODY_TYPE * in_body) {
+        emp_assert(configured);
+        resource_surface->RemoveBody(in_body);
         return *this;
       }
 

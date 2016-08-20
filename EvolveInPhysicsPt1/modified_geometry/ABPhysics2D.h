@@ -267,8 +267,6 @@ namespace emp {
 
                 for (auto body2 : sector_set[sector_id]) {
                   test_count++;
-                  // TODO: this is where we should figure out what body and body2 are, then call appropriate resolve collision relying on proper overload.
-                  //  Ask Charles about fancy way of getting correct dynamic cast w/out if statements. 
                   if (CollideBodies(body, body2)) hit_count++;
                 }
 

@@ -115,17 +115,17 @@ namespace emp {
       template<typename OWNER>
       SimplePhysics2D & AddOrgBody(OWNER * owner, BODY_TYPE * in_body) {
         emp_assert(configured);
-        in_body->SetOwner(owner, GetTypeID(*owner));
+        in_body->SetOwner(owner, GetTypeID(*owner), [owner](){ owner->FlagBodyDestruction(); });
         org_surface->AddBody(in_body);
         return *this;
       }
 
-      SimplePhysics2D & AddOrgBody(BODY_TYPE * in_body) {
-        emp_assert(configured);
-        in_body->SetOwner(nullptr, -1);
-        org_surface->AddBody(in_body);
-        return *this;
-      }
+      // SimplePhysics2D & AddOrgBody(BODY_TYPE * in_body) {
+      //   emp_assert(configured);
+      //   in_body->SetOwner(nullptr, -1);
+      //   org_surface->AddBody(in_body);
+      //   return *this;
+      // }
 
       SimplePhysics2D & RemoveOrgBody(BODY_TYPE * in_body) {
         emp_assert(configured);
@@ -136,7 +136,7 @@ namespace emp {
       template<typename OWNER>
       SimplePhysics2D & AddResourceBody(OWNER * owner, BODY_TYPE * in_body) {
         emp_assert(configured);
-        in_body->SetOwner(owner, GetTypeID(*owner));
+        in_body->SetOwner(owner, GetTypeID(*owner), [owner](){ owner->FlagBodyDestruction(); });
         resource_surface->AddBody(in_body);
         return *this;
       }

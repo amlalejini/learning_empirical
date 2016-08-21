@@ -90,12 +90,13 @@ namespace emp {
 
     void* owner_ptr;
     int owner_id;        // -1 means no owner has been assigned.
+    std::function<void()> destruction_callback;
 
   public:
     Body2D_Base() : birth_time(0.0), mass(1.0), inv_mass(1 / mass), color_id(0), repro_count(0), detach_on_repro(true), growth_rate(1.0), pressure(0), max_pressure(1.0), is_colliding(false), to_destroy(false), owner_id(-1) { ; }
     virtual ~Body2D_Base() {
       // TODO: need a way to remove signals!
-      if (owner_ptr != nullptr) destruction_sig.Trigger();
+      if (owner_ptr != nullptr) destruction_callback();
     }
 
     // All physics bodies must indicate that they are indeed physics bodies.
@@ -120,14 +121,17 @@ namespace emp {
     void* GetOwnerPtr() { return owner_ptr; }
     virtual bool ExceedsStressThreshold() const { return pressure > max_pressure; }
 
-    void InvalidateOwner() { owner_ptr = nullptr; owner_id = -1;}
+    void InvalidateOwner() { owner_ptr = nullptr; owner_id = -1; destruction_callback = [](){ ; }; }
     void MarkForDestruction() { to_destroy = true;  }
     void SetBirthTime(double in_time) { birth_time = in_time; }
     void SetMaxPressure(double mp) { max_pressure = mp; }
     void SetDetachOnRepro(bool detach) { detach_on_repro = detach; }
     void SetGrowthRate(double rate) { growth_rate = rate; }
     void SetColorID(uint32_t in_id) { color_id = in_id; }
-    void SetOwner(void* owner, int id) { owner_ptr = owner; owner_id = id; }
+    void SetOwner(void* owner, int id, std::function<void()> destruction_callback) {
+      owner_ptr = owner; owner_id = id;
+      this->destruction_callback = destruction_callback;
+    }
     void RegisterDestructionCallback(std::function<void()> callback) {
       destruction_sig.AddAction(callback);
     }

@@ -24,12 +24,17 @@ class SimpleResourceBody;
 // };
 
 class SimpleResource {
+  using Body_t = emp::CircleBody2D;
+  friend class emp::CircleBody2D;
   private:
-    using Body_t = emp::CircleBody2D;
     Body_t* body;                     // An organism/resource's body may be deleted by outside forces.
     double value;
     double age;
     bool has_body;
+
+    void OnBodyDestruction() {
+      has_body = false;
+    }
 
   public:
     SimpleResource(const emp::Circle<double> &_p, double value = 1.0)
@@ -63,6 +68,7 @@ class SimpleResource {
     Body_t & GetBody() { emp_assert(body); return *body; }
     const Body_t & GetConstBody() const { emp_assert(has_body); return *body; }
     bool HasBody() const { return has_body; }
+    void FlagBodyDestruction() { has_body = false; }
 
     void SetValue(double value) { this->value = value; }
     void SetAge(double age) { this->age = age; }
@@ -73,8 +79,6 @@ class SimpleResource {
     // (These things need access to the lookup table that currently sits in the physics.)
     void AttachBody(Body_t * in_body) {
         body = in_body;
-        // If body is ever destroyed, tell this.
-        body->RegisterDestructionCallback([this]() { this->has_body = false; });
         has_body = true;
     }
 

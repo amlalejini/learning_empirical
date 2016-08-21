@@ -14,9 +14,9 @@
 // TODO: Organisms/Resources will no longer own bodies, instead bodies will be attached. NO longer responsible for clearning up body's memory.
 // TODO: make SimpleOrganism bodies compatible with surface
 class SimpleOrganism {
+  using Body_t = emp::CircleBody2D;
+  friend class emp::CircleBody2D;
   private:
-    using Body_t = emp::CircleBody2D;
-    // TODO: make body a shared ptr
     Body_t *body;
     int offspring_count;
     double birth_time;
@@ -81,6 +81,7 @@ class SimpleOrganism {
     Body_t & GetBody() { emp_assert(has_body); return *body; }
     const Body_t & GetConstBody() const { emp_assert(has_body) return *body; }
     bool HasBody() const { return has_body; }
+    void FlagBodyDestruction() { has_body = false; }
     double GetResourceConsumptionProb(const SimpleResource &resource) {
       if (genome.GetSize() == 0) return 1.0;
       else return genome.CountOnes() / (double) genome.GetSize();
@@ -89,8 +90,6 @@ class SimpleOrganism {
     // TODO: should be able to point body to owner here
     void AttachBody(Body_t * in_body) {
       body = in_body;
-      // If body is ever destroyed, tell this.
-      body->RegisterDestructionCallback([this]() { this->has_body = false; });
       has_body = true;
     }
 

@@ -35,11 +35,9 @@ class SimpleResource {
     SimpleResource(const emp::Circle<double> &_p, double value = 1.0)
       : age(0.0)
     {
-      body = new Body_t(_p);
+      AttachBody(new Body_t(_p));
       body->SetDetachOnRepro(true);
-      body->RegisterDestructionCallback([this]() { this->has_body = false; });
       body->SetMaxPressure(99999); // Big number.
-      has_body = true;
       this->value = value;
     }
 
@@ -47,15 +45,16 @@ class SimpleResource {
       : value(other.GetValue()),
         age(0.0)
     {
-      body = new Body_t(other.GetConstBody().GetPerimeter());
+      AttachBody(new Body_t(other.GetConstBody().GetPerimeter()));
       body->SetDetachOnRepro(other.GetConstBody().GetDetachOnRepro());
-      body->RegisterDestructionCallback([this]() { this->has_body = false; });
       body->SetMaxPressure(99999);
-      has_body = true;
     }
 
     ~SimpleResource() {
-      if (has_body) delete body; 
+      if (has_body) {
+        body->MarkForDestruction();
+        std::cout << "Res destroyed. Marking resource body for destruction!" << std::endl;
+      }
     }
 
     double GetValue() const { return value; }
@@ -69,6 +68,15 @@ class SimpleResource {
     void SetAge(double age) { this->age = age; }
     int IncAge() { return ++age; }
     void SetColorID(int id) { emp_assert(has_body); body->SetColorID(id); }
+
+    // TODO: should be able to point body to THIS as owner.
+    // (These things need access to the lookup table that currently sits in the physics.)
+    void AttachBody(Body_t * in_body) {
+        body = in_body;
+        // If body is ever destroyed, tell this.
+        body->RegisterDestructionCallback([this]() { this->has_body = false; });
+        has_body = true;
+    }
 
     // operator overloads
     bool operator==(const SimpleResource &other) const {

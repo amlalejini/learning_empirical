@@ -143,6 +143,7 @@ class PopulationManager_SimplePhysics {
 
     // Physics collision callback (called when )
     void PhysicsCollisionCallback(PhysicsBody_t *body1, PhysicsBody_t *body2) {
+      std::cout << "Physics collision callback@!" << std::endl;
       const bool is_resource = (body1->GetOwnerID() == RESOURCE_TYPE_ID || body2->GetOwnerID() == RESOURCE_TYPE_ID);
       const bool is_org = (body1->GetOwnerID() == ORG_TYPE_ID || body2->GetOwnerID() == ORG_TYPE_ID);
       if (is_resource && is_org) {
@@ -179,6 +180,7 @@ class PopulationManager_SimplePhysics {
 
     // Progress time by one step.
     void Update() {
+      std::cout << "POPM UPdate ===================================" << std::endl;
       // Progress physics (progress each physics body a single time step).
       physics.Update();
       emp::vector<Org_t *> new_organisms;
@@ -212,7 +214,7 @@ class PopulationManager_SimplePhysics {
         int new_size = ((int) population.size()) - (total_size - max_pop_size);
         emp::Shuffle<Org_t *>(*random_ptr, population, new_size);
         for (int i = new_size; i < (int) population.size(); i++) {
-          physics.RemoveOrgBody(population[i]->GetBodyPtr());
+          //physics.RemoveOrgBody(population[i]->GetBodyPtr());
           delete population[i];
         }
         population.resize(new_size);
@@ -224,9 +226,11 @@ class PopulationManager_SimplePhysics {
       cur_size = GetNumResources();
       cur_id = 0;
       while (cur_id < cur_size) {
+        std::cout << "-- managing a resource (popm) --" << std::endl;
         Resource_t *resource = resources[cur_id];
         // Remove resources with no body.
         if (!resource->HasBody()) {
+          std::cout << "Res no body. Delete." << std::endl;
           delete resource;
           cur_size--;
           resources[cur_id] = resources[cur_size];
@@ -248,7 +252,7 @@ class PopulationManager_SimplePhysics {
             hungry_org->ConsumeResource(*resource);
             // Remove the consumed resource.
             // TODO: this is inefficient. Should work to make this easier. (flags of some sort?)
-            physics.RemoveResourceBody(resource->GetBodyPtr());
+            //physics.RemoveResourceBody(resource->GetBodyPtr());
             delete resource;
             cur_size--;
             resources[cur_id] = resources[cur_size];
@@ -256,20 +260,26 @@ class PopulationManager_SimplePhysics {
           }
         }
         // Check aging.
-        if (resource->IncAge() > max_resource_age) {
-          physics.RemoveResourceBody(resource->GetBodyPtr());
+        std::cout << "Res age: " << resource->GetAge() << std::endl;
+        if (resource->GetAge() > max_resource_age) {
+          std::cout << "deleting an old resource" << std::endl;
+          //physics.RemoveResourceBody(resource->GetBodyPtr());
           delete resource;
           cur_size--;
           resources[cur_id] = resources[cur_size];
           continue;
         }
+        resource->IncAge();
         // Add some noise to movement.
         resource->GetBody().IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(movement_noise));
         cur_id++;
       }
       resources.resize(cur_size);
       // Pump resources in as necessary to max capacity.
+      std::cout << "Adding new resources..\nNum resources? " << GetNumResources() << std::endl;
+      std::cout << "RS size: " << physics.GetResourceBodySet().size() << std::endl;
       while (GetNumResources() < max_resource_count) {
+        std::cout <<"--------Adding a new resource-------" << std::endl;
         emp_assert((physics.GetWidth() > resource_radius * 2.0) && (physics.GetHeight() > resource_radius * 2.0));
         emp::Point<double> res_loc(random_ptr->GetDouble(resource_radius, physics.GetWidth() - resource_radius), random_ptr->GetDouble(resource_radius, physics.GetHeight() - resource_radius));
         Resource_t *new_resource = new Resource_t(emp::Circle<double>(res_loc, resource_radius));
@@ -277,8 +287,12 @@ class PopulationManager_SimplePhysics {
         // TODO: make the below values not magic numbers.
         new_resource->SetColorID(180);
         new_resource->GetBody().SetMass(1);
-        AddResource(new_resource);
+        std::cout << "new res has body? " << new_resource->HasBody() << std::endl;
+        int p = AddResource(new_resource);
+        std::cout << "new res has body2? " << resources[p]->HasBody() << std::endl;
       }
+      std::cout << "...done adding new resources. " <<  std::endl;
+      std::cout << "RS size: " << physics.GetResourceBodySet().size() << std::endl;
     }
 };
 

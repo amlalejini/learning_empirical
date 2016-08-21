@@ -86,13 +86,17 @@ namespace emp {
     Signal<> destruction_sig;          // Triggered on body destruction.
     Signal<Body2D_Base*> collision_sig; // Triggered on collision with another body.
     bool is_colliding;   // Is currently colliding?
+    bool to_destroy;
 
     void* owner_ptr;
     int owner_id;        // -1 means no owner has been assigned.
 
   public:
-    Body2D_Base() : birth_time(0.0), mass(1.0), inv_mass(1 / mass), color_id(0), repro_count(0), detach_on_repro(true), growth_rate(1.0), pressure(0), max_pressure(1.0), is_colliding(false), owner_id(-1) { ; }
-    virtual ~Body2D_Base() { destruction_sig.Trigger(); }
+    Body2D_Base() : birth_time(0.0), mass(1.0), inv_mass(1 / mass), color_id(0), repro_count(0), detach_on_repro(true), growth_rate(1.0), pressure(0), max_pressure(1.0), is_colliding(false), to_destroy(false), owner_id(-1) { ; }
+    virtual ~Body2D_Base() {
+      std::cout << "Body being destroyed." << std::endl;
+      if (!to_destroy) destruction_sig.Trigger();
+    }
 
     // All physics bodies must indicate that they are indeed physics bodies.
     static constexpr bool emp_is_physics_body = true;
@@ -105,6 +109,7 @@ namespace emp {
     uint32_t GetColorID() const { return color_id; }
     bool IsReproducing() const { return repro_count; }
     bool IsColliding() const { return is_colliding; }
+    bool ToDestroy() const { return to_destroy; }
     int GetReproCount() const { return repro_count; }
     bool GetDetachOnRepro() const { return detach_on_repro; }
     Point<double> GetShift() const { return shift; }
@@ -115,6 +120,7 @@ namespace emp {
     void* GetOwnerPtr() { return owner_ptr; }
     virtual bool ExceedsStressThreshold() const { return pressure > max_pressure; }
 
+    void MarkForDestruction() { to_destroy = true;  }
     void SetBirthTime(double in_time) { birth_time = in_time; }
     void SetMaxPressure(double mp) { max_pressure = mp; }
     void SetDetachOnRepro(bool detach) { detach_on_repro = detach; }

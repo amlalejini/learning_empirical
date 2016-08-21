@@ -29,41 +29,46 @@ class SimpleOrganism {
     emp::BitVector genome;
 
     SimpleOrganism(const emp::Circle<double> &_p, int genome_length = 1, bool detach_on_birth = true)
-      : offspring_count(0),
+      : body(nullptr),
+        offspring_count(0),
         birth_time(0.0),
         membrane_strengh(1.0),
+        has_body(false),
         energy(0.0),
         resources_collected(0.0),
         genome(genome_length, false)
     {
-      body = new Body_t(_p);
+      AttachBody(new Body_t(_p));
       body->SetDetachOnRepro(detach_on_birth);
-      body->RegisterDestructionCallback([this]() { this->has_body = false; });
-      //body->RegisterCollisionCallback([this](emp::Body2D_Base *other) { this->CollisionCallback(other); } );
       body->SetMaxPressure(membrane_strengh);
       SetColorID();
-      has_body = true;
     }
 
+    // At the moment does not copy a body over.
     SimpleOrganism(const SimpleOrganism &other)
-       : offspring_count(other.GetOffspringCount()),
+       : body(nullptr),
+         offspring_count(other.GetOffspringCount()),
          birth_time(other.GetBirthTime()),
          membrane_strengh(other.GetMembraneStrength()),
+         has_body(other.has_body),
          energy(other.GetEnergy()),
          resources_collected(other.GetResourcesCollected()),
          genome(other.genome)
     {
-      body = new Body_t(other.GetConstBody().GetPerimeter());
-      body->SetDetachOnRepro(other.GetDetachOnBirth());
-      body->RegisterDestructionCallback([this]() { this->has_body = false; });
-      //body->RegisterCollisionCallback([this](emp::Body2D_Base *other) { this->CollisionCallback(other); } );
-      body->SetMaxPressure(membrane_strengh);
+      if (has_body) {
+        AttachBody(new Body_t(other.GetConstBody().GetPerimeter()));
+        body->SetDetachOnRepro(other.GetConstBody().GetDetachOnRepro());
+        body->SetMaxPressure(membrane_strengh);
+        body->SetMass(other.GetConstBody().GetMass());
+      }
       SetColorID();
-      has_body = true;
     }
 
     ~SimpleOrganism() {
-      if (has_body) delete body;
+      if (has_body) {
+        std::cout << "Organism getting destroyed." << std::endl;
+        body->MarkForDestruction();
+      }
     }
 
     int GetOffspringCount() const { return offspring_count; }
@@ -76,10 +81,17 @@ class SimpleOrganism {
     Body_t & GetBody() { emp_assert(has_body); return *body; }
     const Body_t & GetConstBody() const { emp_assert(has_body) return *body; }
     bool HasBody() const { return has_body; }
-
     double GetResourceConsumptionProb(const SimpleResource &resource) {
       if (genome.GetSize() == 0) return 1.0;
       else return genome.CountOnes() / (double) genome.GetSize();
+    }
+
+    // TODO: should be able to point body to owner here
+    void AttachBody(Body_t * in_body) {
+      body = in_body;
+      // If body is ever destroyed, tell this.
+      body->RegisterDestructionCallback([this]() { this->has_body = false; });
+      has_body = true;
     }
 
     void ConsumeResource(const SimpleResource &resource) {

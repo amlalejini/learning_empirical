@@ -52,8 +52,8 @@ class SimpleResource {
 
     ~SimpleResource() {
       if (has_body) {
+        body->InvalidateOwner();
         body->MarkForDestruction();
-        std::cout << "Res destroyed. Marking resource body for destruction!" << std::endl;
       }
     }
 

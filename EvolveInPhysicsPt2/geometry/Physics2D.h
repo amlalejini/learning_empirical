@@ -137,7 +137,6 @@ namespace emp {
       SimplePhysics2D & AddResourceBody(OWNER * owner, BODY_TYPE * in_body) {
         emp_assert(configured);
         in_body->SetOwner(owner, GetTypeID(*owner));
-        std::cout << "Physics::AddResourceBody()" << std::endl;
         resource_surface->AddBody(in_body);
         return *this;
       }
@@ -167,7 +166,6 @@ namespace emp {
         // If bodies aren't touching, no collision.
         if (sq_pair_dist >= sq_min_dist) return false;
         // Collision! Trigger body collision signals and physics collision signal.
-        std::cout << "Trigger a collision for bodies and for collision sig." << std::endl;
         body1->TriggerCollision(body2);
         body2->TriggerCollision(body1);
         collision_sig.Trigger(body1, body2);
@@ -272,7 +270,6 @@ namespace emp {
 
       // Progress physics by a single time step.
       void Update() {
-        std::cout << "============= Physics UPDATE ============" << std::endl;
         emp_assert(configured);
         update_sig.Trigger(); // TODO: QUESTION: should we signal this at the beginning of an update? or at the end?
 
@@ -288,31 +285,22 @@ namespace emp {
           const double f = surface->GetFriction();
           int cur_size = (int) surface_body_set.size();
           int cur_id = 0;
-          std::cout << "~~~~~ SURFACE ~~~~~ size: " << cur_size << std::endl;
           while (cur_id < cur_size) {
             emp_assert(surface_body_set[cur_id] != nullptr);
-            std::cout << "==== Looking at a body ===" << std::endl;
             if (surface_body_set[cur_id]->ToDestroy()) {
-              std::cout << " - Delete body from surface." << std::endl;
               delete surface_body_set[cur_id];
               cur_size--;
               surface_body_set[cur_id] = surface_body_set[cur_size];
             } else {
-              std::cout << " - Update body." << std::endl;
               surface_body_set[cur_id]->BodyUpdate(f);
               cur_id++;
             }
           }
           surface_body_set.resize(cur_size);
-          std::cout << "RS size: " << resource_surface->GetBodySet().size() << std::endl;
         }
-
-        std::cout << "Resource surface size: " << resource_surface->GetBodySet().size() << std::endl;
 
         // Test for and handle collisions.
         TestCollisions();
-        std::cout << "After collisions..." << std::endl;
-        std::cout << "RS size: " << resource_surface->GetBodySet().size() << std::endl;
         // Test bodies for stress-induced removal.
         for (auto *surface : surface_set) {
           auto &surface_body_set = surface->GetBodySet();
@@ -330,7 +318,6 @@ namespace emp {
           }
           surface_body_set.resize(cur_size);
         }
-        std::cout << "RS size: " << resource_surface->GetBodySet().size() << std::endl;
       }
 
       emp::vector<BODY_TYPE *> & GetOrgBodySet() {

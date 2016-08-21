@@ -66,7 +66,7 @@ class SimpleOrganism {
 
     ~SimpleOrganism() {
       if (has_body) {
-        std::cout << "Organism getting destroyed." << std::endl;
+        body->InvalidateOwner();
         body->MarkForDestruction();
       }
     }

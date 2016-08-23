@@ -1,0 +1,9 @@
+
+TODOS:
+  * Clean up all canvas drawing tools. (should not refer to bodies, should refer only to shapes)
+  * Write more canvas drawing tools. (add surface set drawing function)
+  * Documentation on
+    * geometry/*
+    * physics/*
+  * Drawing utilities for OwnedShapes
+  * Discuss the fate of BODY_LINK_TYPEs

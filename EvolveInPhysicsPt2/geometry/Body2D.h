@@ -93,9 +93,12 @@ namespace emp {
     std::function<void()> destruction_callback;
 
   public:
-    Body2D_Base() : birth_time(0.0), mass(1.0), inv_mass(1 / mass), color_id(0), repro_count(0), detach_on_repro(true), growth_rate(1.0), pressure(0), max_pressure(1.0), is_colliding(false), to_destroy(false), owner_id(-1) { ; }
+    Body2D_Base() : birth_time(0.0), mass(1.0), inv_mass(1 / mass), color_id(0),
+                    repro_count(0), detach_on_repro(true), growth_rate(1.0),
+                    pressure(0), max_pressure(1.0), is_colliding(false),
+                    to_destroy(false), owner_id(-1) { ; }
     virtual ~Body2D_Base() {
-      // TODO: need a way to remove signals!
+      destruction_sig.Trigger();
       if (owner_ptr != nullptr) destruction_callback();
     }
 

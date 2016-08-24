@@ -313,6 +313,7 @@ class EvoInPhysicsInterface {
 
     // Call to initialize a new experiment with current config values.
     void InitializeExperiment() {
+      std::cout << "Interface::InitializeExperiment" << std::endl;
       // Setup the world.
       if (world != nullptr) delete world;
       if (random != nullptr) delete random; // World does not own *random. Delete it.
@@ -331,13 +332,16 @@ class EvoInPhysicsInterface {
     }
 
     void ResetEvolution() {
+      std::cout << "Interface::ResetEvolution" << std::endl;
+      std::cout << "Interface::ResetEvolution - About to clear world." << std::endl;
       // Purge the world!
       world->Clear();
       world->update = 0;
+      std::cout << "Interface::ResetEvolution - Cleared world." << std::endl;
       // Initialize the population.
       const emp::Point<double> mid_point(world_width / 2.0, world_height / 2.0);
       int org_radius = max_organism_radius;
-      Organism_t ancestor(emp::Circle<double>(mid_point, org_radius), genome_length, detach_on_birth);
+      Organism_t ancestor(emp::Circle(mid_point, org_radius), genome_length, detach_on_birth);
       // Randomize ancestor genome.
       for (int i = 0; i < ancestor.genome.GetSize(); i++) {
         if (random->P(0.5)) ancestor.genome[i] = !ancestor.genome[i];
@@ -362,14 +366,16 @@ class EvoInPhysicsInterface {
 
     // Single animation step for this interface.
     void Animate(const web::Animate &anim) {
+      std::cout << "Interface::Animate" << std::endl;
       world->Update();
       // Draw
-      web::Draw(world_view.Canvas("simple-world-canvas"), world->popM.GetPhysics().GetSurfaceSet(), emp::GetHueMap(360));
+      web::Draw(world_view.Canvas("simple-world-canvas"), world->popM.GetPhysics().GetSurface(), emp::GetHueMap(360));
       stats_view.Redraw();
     }
 
     // Called on start/stop button press.
     bool DoToggleRun() {
+      std::cout << "Interface::DoToggleRun" << std::endl;
       anim.ToggleActive();
       // Grab buttons to manipulate:
       auto start_but = dashboard.Button("start_but");
@@ -391,14 +397,16 @@ class EvoInPhysicsInterface {
 
     // Called on reset button press and when initializing the experiment.
     bool DoReset() {
+      std::cout << "Interface::DoReset" << std::endl;
       ResetEvolution();
-      web::Draw(world_view.Canvas("simple-world-canvas"), world->popM.GetPhysics().GetSurfaceSet(), emp::GetHueMap(360));
+      web::Draw(world_view.Canvas("simple-world-canvas"), world->popM.GetPhysics().GetSurface(), emp::GetHueMap(360));
       stats_view.Redraw();
       return true;
     }
 
     // Called on step button press.
     bool DoStep() {
+      std::cout << "Interface::DoStep" << std::endl;
       emp_assert(anim.GetActive() == false);
       anim.Step();
       return true;
@@ -406,6 +414,7 @@ class EvoInPhysicsInterface {
 
     // Called on run experiment button press (from config exp page).
     bool DoRunExperiment() {
+      std::cout << "Interface::DoRunExperiment" << std::endl;
       // Collect parameter values.
       UpdateParams();
       // Initialize the experiment.
@@ -417,6 +426,7 @@ class EvoInPhysicsInterface {
 
     // Called on reconfigure exp button press (from run exp page).
     bool DoReconfigureExperiment() {
+      std::cout << "Interface::DoReconfigureExperiment" << std::endl;
       // Set page mode to CONFIG.
       if (anim.GetActive()) {
         anim.ToggleActive();

@@ -8,7 +8,7 @@
 #include <iostream>
 #include <limits>
 
-#include "../physics/Physics2D.h"
+#include "physics/Physics2D.h"
 #include "../resources/SimpleResource.h"
 
 #include "evo/PopulationManager.h"
@@ -36,8 +36,7 @@ class PopulationManager_SimplePhysics {
     // TODO How do I guarantee that ORG has a PHYSICS_BODY_TYPE?
     using Org_t = ORG;                  // Just here for consistency
     using Resource_t = SimpleResource;
-    using PhysicsBody_t = CircleBody2D;
-    using Physics_t = SimplePhysics2D<SimpleResource, ORG>;
+    using Physics_t = CirclePhysics2D< Body<emp::Circle, SimpleResource>, Body<emp::Circle, SimpleOrganism>  >;
     // TODO
     Physics_t physics;
     emp::vector<Org_t*> population;
@@ -59,8 +58,8 @@ class PopulationManager_SimplePhysics {
     double movement_noise;
 
     // Useful things to not have to look up all of the time.
-    static constexpr int RESOURCE_TYPE_ID = Physics_t::template GetTypeID<Resource_t>();
-    static constexpr int ORG_TYPE_ID = Physics_t::template GetTypeID<ORG>();
+    // static constexpr int RESOURCE_TYPE_ID = Physics_t::template GetTypeID<Resource_t>();
+    // static constexpr int ORG_TYPE_ID = Physics_t::template GetTypeID<ORG>();
 
   public:
     PopulationManager_SimplePhysics()

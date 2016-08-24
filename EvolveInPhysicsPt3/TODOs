@@ -7,3 +7,5 @@ TODOS:
     * physics/*
   * Drawing utilities for OwnedShapes
   * Discuss the fate of BODY_LINK_TYPEs
+  * Move surface friction out of the Surface class. Surface knows nothing about physics.
+  * DECIDE: CirclePhysics move to single surface? (probably)

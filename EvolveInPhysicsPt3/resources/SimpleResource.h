@@ -6,26 +6,11 @@
 #ifndef SIMPLERESOURCE_H
 #define SIMPLERESOURCE_H
 
-#include "../geometry/Body2D.h"
+#include "physics/Body2D.h"
 
-class SimpleResource;
-class SimpleResourceBody;
-
-// TODO: What's the best way to do this?
-// Can I do a 'bodywrapper' class somehow? Can I make the base class a template?
-// class SimpleResourceBody : public emp::CircleBody2D {
-//   private:
-//     SimpleResource *owner;
-//   public:
-//     using emp::CircleBody2D::CircleBody2D;
-//     void SetOwner(SimpleResource *resource) { owner = resource; }
-//     SimpleResource * GetOwner() { return owner; }
-//
-// };
 
 class SimpleResource {
-  using Body_t = emp::CircleBody2D;
-  friend class emp::CircleBody2D;
+  using Body_t = emp::Body<emp::Circle, SimpleResource>;
   private:
     Body_t* body;                     // An organism/resource's body may be deleted by outside forces.
     double value;
@@ -37,30 +22,32 @@ class SimpleResource {
     }
 
   public:
-    SimpleResource(const emp::Circle<double> &_p, double value = 1.0)
-      : age(0.0)
+    SimpleResource(const emp::Circle &_p, double value = 1.0) :
+      age(0.0),
+      has_body(false)
     {
-      AttachBody(new Body_t(_p));
-      body->SetDetachOnRepro(true);
+      AttachBody(new Body_t(this, _p));
+      //body->SetDetachOnRepro(true);
       body->SetMaxPressure(99999); // Big number.
+      body->SetMass(5); // TODO: make this not magic number.
       this->value = value;
     }
 
-    SimpleResource(const SimpleResource &other)
-      : value(other.GetValue()),
-        age(0.0)
+    SimpleResource(const SimpleResource &other) :
+        value(other.GetValue()),
+        age(0.0),
+        has_body(other.HasBody())
     {
-      AttachBody(new Body_t(other.GetConstBody().GetPerimeter()));
-      body->SetDetachOnRepro(other.GetConstBody().GetDetachOnRepro());
-      body->SetMaxPressure(99999);
-    }
-
-    ~SimpleResource() {
       if (has_body) {
-        body->InvalidateOwner();
-        body->MarkForDestruction();
+        const emp::Circle circle(other.GetConstBody().GetConstShape());
+        AttachBody(new Body_t(this, circle));
+        //body->SetDetachOnRepro(other.GetConstBody().GetDetachOnRepro());
+        body->SetMaxPressure(99999);
+        body->SetMass(other.GetConstBody().GetMass());
       }
     }
+
+    ~SimpleResource() {  }
 
     double GetValue() const { return value; }
     double GetAge() const { return age; }

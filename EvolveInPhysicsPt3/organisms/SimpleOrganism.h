@@ -37,9 +37,10 @@ class SimpleOrganism {
         genome(genome_length, false)
     {
       AttachBody(new Body_t(this, _p.GetCenter(), _p.GetRadius()));
-      //body->SetDetachOnRepro(detach_on_birth);
       body->SetMaxPressure(membrane_strengh);
       body->SetMass(10); // TODO: make this not a magic number.
+      body->RegisterOnCollisionCallback([this](emp::Body2D_Base * other_body) { this->OnCollision(other_body); });
+      SetColorID();
     }
 
     // At the moment does not copy a body over.
@@ -54,15 +55,20 @@ class SimpleOrganism {
          genome(other.genome)
     {
       if (has_body) {
-        std::cout << "Creating organism via copy constructor." << std::endl;
         AttachBody(new Body_t(this, other.GetConstBody().GetConstShape()));
-        //body->SetDetachOnRepro(other.GetConstBody().GetDetachOnRepro());
         body->SetMaxPressure(membrane_strengh);
         body->SetMass(other.GetConstBody().GetMass());
+        body->RegisterOnCollisionCallback([this](emp::Body2D_Base * other_body) { this->OnCollision(other_body); });
+        SetColorID();
       }
     }
 
-    ~SimpleOrganism() { ; }
+    ~SimpleOrganism() {
+      if (has_body) {
+        body->MarkForDestruction();
+        body->DetachOwner();
+      }
+    }
 
     int GetOffspringCount() const { return offspring_count; }
     double GetEnergy() const { return energy; }
@@ -85,6 +91,15 @@ class SimpleOrganism {
       has_body = true;
     }
 
+    void DetachBody() {
+      body = nullptr;
+      has_body = false;
+    }
+
+    void OnCollision(emp::Body2D_Base * other_body) {
+      // Here is where an organism could handle a collision.
+    }
+
     void ConsumeResource(const SimpleResource &resource) {
       energy += resource.GetValue();
       resources_collected++;
@@ -93,8 +108,7 @@ class SimpleOrganism {
     void SetDetachOnBirth(bool detach) { emp_assert(has_body); /*body->SetDetachOnRepro(detach);*/ }
     void SetMembraneStrength(double strength) {
       membrane_strengh = strength;
-      emp_assert(has_body);
-      body->SetMaxPressure(membrane_strengh);
+      if (has_body) body->SetMaxPressure(membrane_strengh);
     }
     void SetEnergy(double e) { energy = e; }
     void SetBirthTime(double t) { birth_time = t; }
@@ -117,8 +131,8 @@ class SimpleOrganism {
       // Link and nudge. offspring
       emp::Angle repro_angle(r->GetDouble(2.0 * emp::PI)); // What angle should we put the offspring at?
       auto offset = repro_angle.GetPoint(0.1);
-      //body->AddLink(emp::LINK_TYPE::REPRODUCTION, offspring->GetBody(), offset.Magnitude(), body->GetRadius() * 2);
-      //offspring->GetBody().Translate(offset);
+      body->AddLink(emp::BODY_LINK_TYPE::REPRODUCTION, offspring->GetBody(), offset.Magnitude(), body->GetShape().GetRadius() * 2);
+      offspring->GetBody().GetShape().Translate(offset);
       offspring_count++;
       return offspring;
     }
@@ -128,6 +142,8 @@ class SimpleOrganism {
       resources_collected = 0;
       offspring_count = 0;
     }
+
+    //TODO: Attach/detach body functions?
 
     // This is called when this organism's body is involved in a collision.
     // void CollisionCallback(emp::Body2D_Base *other_body) {

@@ -47,7 +47,10 @@ class SimpleResource {
       }
     }
 
-    ~SimpleResource() {  }
+    ~SimpleResource() {
+      body->MarkForDestruction();
+      body->DetachOwner();
+    }
 
     double GetValue() const { return value; }
     double GetAge() const { return age; }
@@ -67,6 +70,11 @@ class SimpleResource {
     void AttachBody(Body_t * in_body) {
         body = in_body;
         has_body = true;
+    }
+
+    void DetachBody() {
+      body = nullptr;
+      has_body = false;
     }
 
     // operator overloads

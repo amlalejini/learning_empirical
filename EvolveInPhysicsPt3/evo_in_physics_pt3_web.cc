@@ -24,41 +24,13 @@
 #include "web/Canvas.h"
 #include "web/canvas_utils.h"
 
-#include "emtools/emfunctions.h"
+#include "web/emfunctions.h"
 
 #include "tools/Random.h"
 #include "tools/vector.h"
 #include "tools/assert.h"
 
 #include "evo/World.h"
-
-namespace emp {
-namespace web {
-  // Draw a set of Surface2Ds, specifying the full colormap to be used.
-  // TODO (fix): currently assumes body has a perimeter and will draw as a Circle..
-  template <typename BODY_TYPE>
-  void Draw(Canvas canvas,
-            const emp::vector<Surface2D<BODY_TYPE> *> & surface_set,
-            const emp::vector<std::string> & color_map)
-  {
-    emp_assert((int)surface_set.size() > 0);
-    canvas.Clear();
-
-    const double w = surface_set[0]->GetWidth();
-    const double h = surface_set[0]->GetHeight();
-
-    // Setup a black background for the surface
-    canvas.Rect(0, 0, w, h, "black");
-    for (auto *surface : surface_set) {
-      const auto &body_set = surface->GetConstBodySet();
-      for (auto *body : body_set) {
-        // TODO: Add draw body function (should have one for each type of physics body)
-        canvas.Circle(body->GetPerimeter(), "", color_map[body->GetColorID()]);
-      }
-    }
-  }
-}
-}
 
 namespace web = emp::web;
 
@@ -86,7 +58,7 @@ const double DEFAULT_COST_OF_REPRO = 1;
 const bool DEFAULT_DETACH_ON_BIRTH = true;
 const double DEFAULT_ORGANISM_MEMBRANE_STRENGTH = 10.0;
 //  -- Resource-specific --
-const int DEFAULT_MAX_RESOURCE_AGE = 100;
+const int DEFAULT_MAX_RESOURCE_AGE = 10000;
 const int DEFAULT_MAX_RESOURCE_COUNT = 100;
 const double DEFAULT_RESOURCE_RADIUS = 5.0;
 const double DEFAULT_RESOURCE_VALUE = 1.0;
@@ -323,9 +295,10 @@ class EvoInPhysicsInterface {
       world_view.ClearChildren();
       world_view << web::Canvas(world_width, world_height, "simple-world-canvas") << "<br>";
       // Configure new experiment.
+      // TODO: add resource_in_flow_rate parameter. Currently magic number.
       world->ConfigPop(world_width, world_height, surface_friction,
                        max_pop_size, point_mutation_rate, max_organism_radius,
-                       cost_of_repro, max_resource_age, max_resource_count,
+                       cost_of_repro, max_resource_age, max_resource_count, 10,
                        resource_radius, resource_value, movement_noise);
       // Run a reset
       DoReset();
@@ -341,6 +314,7 @@ class EvoInPhysicsInterface {
       // Initialize the population.
       const emp::Point<double> mid_point(world_width / 2.0, world_height / 2.0);
       int org_radius = max_organism_radius;
+      std::cout << "Interface::ResetEvolution - About to create ancestor." << std::endl;
       Organism_t ancestor(emp::Circle(mid_point, org_radius), genome_length, detach_on_birth);
       // Randomize ancestor genome.
       for (int i = 0; i < ancestor.genome.GetSize(); i++) {
@@ -350,26 +324,27 @@ class EvoInPhysicsInterface {
       ancestor.GetBody().SetMass(10.0);
       ancestor.SetMembraneStrength(organism_membrane_strength);
       ancestor.SetBirthTime(-1);
+      std::cout << "Interface::ResetEvolution - About to insert ancestor into world." << std::endl;
       world->Insert(ancestor);
-      // // For testing:
-      // for (int i = 0; i < 10; i++) {
-      //   const emp::Point<double> loc(random->GetInt(world_width), random->GetInt(world_height));
-      //   Organism_t orgie(emp::Circle<double>(loc, org_radius), genome_length, detach_on_birth);
-      //   orgie.SetColorID();
-      //   orgie.GetBody().SetMass(10.0);
-      //   orgie.SetMembraneStrength(organism_membrane_strength);
-      //   orgie.SetBirthTime(-1);
-      //   world->Insert(orgie);
-      // }
+      std::cout << "Interface::ResetEvolution - Inserted ancestor into world." << std::endl;
+      // For testing:
+      for (int i = 0; i < 5; i++) {
+        const emp::Point<double> loc(random->GetInt(world_width), random->GetInt(world_height));
+        Organism_t orgie(emp::Circle(loc, org_radius), genome_length, detach_on_birth);
+        //orgie.SetColorID();
+        orgie.GetBody().SetMass(10.0);
+        orgie.SetMembraneStrength(organism_membrane_strength);
+        orgie.SetBirthTime(-1);
+        world->Insert(orgie);
+      }
 
     }
 
     // Single animation step for this interface.
     void Animate(const web::Animate &anim) {
-      std::cout << "Interface::Animate" << std::endl;
       world->Update();
       // Draw
-      web::Draw(world_view.Canvas("simple-world-canvas"), world->popM.GetPhysics().GetSurface(), emp::GetHueMap(360));
+      world->popM.GetPhysics().DrawOnCanvas(world_view.Canvas("simple-world-canvas"), emp::GetHueMap(360));
       stats_view.Redraw();
     }
 
@@ -399,7 +374,7 @@ class EvoInPhysicsInterface {
     bool DoReset() {
       std::cout << "Interface::DoReset" << std::endl;
       ResetEvolution();
-      web::Draw(world_view.Canvas("simple-world-canvas"), world->popM.GetPhysics().GetSurface(), emp::GetHueMap(360));
+      world->popM.GetPhysics().DrawOnCanvas(world_view.Canvas("simple-world-canvas"), emp::GetHueMap(360));
       stats_view.Redraw();
       return true;
     }

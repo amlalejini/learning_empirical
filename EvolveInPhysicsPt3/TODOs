@@ -9,3 +9,9 @@ TODOS:
   * Discuss the fate of BODY_LINK_TYPEs
   * Move surface friction out of the Surface class. Surface knows nothing about physics.
   * DECIDE: CirclePhysics move to single surface? (probably)
+  * canvas_utils.h: Clean up drawing tools. Make sure we require Surface2D<Circle> if we're going to
+    draw circles.
+  * Implement a BodyCollisionInfo struct:
+    * bool resolved
+    * dist, overlap, force, etc.
+  * Document all template assumptions: Ex: body owners must have functions x,y, and z.

@@ -212,6 +212,18 @@ class PopulationManager_SimplePhysics {
         cur_id++;
       }
       population.resize(cur_size);
+      // Cull population to make room for new offspring.
+      int total_size = (int)(population.size() + new_organisms.size());
+      if (total_size > max_pop_size) {
+        // Cull population to make room for new organisms.
+        int new_size = ((int) population.size()) - (total_size - max_pop_size);
+        emp::Shuffle<Org_t *>(*random_ptr, population, new_size);
+        for (int i = new_size; i < (int) population.size(); i++) {
+          //physics.RemoveOrgBody(population[i]->GetBodyPtr());
+          delete population[i];
+        }
+        population.resize(new_size);
+      }
       // Add new organisms to the population.
       for (auto * new_organism : new_organisms) {
         AddOrg(new_organism);

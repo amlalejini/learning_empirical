@@ -94,16 +94,11 @@ class SimpleOrganism {
       has_body = false;
     }
 
-    // TODO: how do we want to handle this? At the very least, this is not a great function name.
-    //  Probably want to change over to Update() function or Execute() function.
-    bool CheckBody() {
-      // If something (physics) has destroyed the body,
-      // clean it up.
+    void Evaluate() {
       if (body->GetDestroyFlag()) {
         delete body;
         DetachBody();
       }
-      return HasBody();
     }
 
     void OnCollision(emp::Body2D_Base * other_body) {

@@ -177,14 +177,81 @@ class PopulationManager_SimplePhysics {
       physics.Update();
       // Place for new organisms.
       emp::vector<Org_t*> new_organisms;
-      // Manage the population.
-      int cur_size = GetSize();
+      ////////////////////////////////////
+      // Manage the resources.
+      ////////////////////////////////////
+      int cur_size = GetNumResources();
       int cur_id = 0;
       while (cur_id < cur_size) {
+        Resource_t *resource = resources[cur_id];
+        // Evaluate the resource.
+        resource->Evaluate();
+        // Remove resources with no body.
+        if (!resource->HasBody()) {
+          delete resource;
+          cur_size--;
+          resources[cur_id] = resources[cur_size];
+          continue;
+        }
+        // Resource has body, proceed.
+        // Handle resource consumption.
+        // TODO: move this to SimpleResource::Evaluate?
+        auto consumption_links = resource->GetBodyPtr()->GetLinksToByType(BODY_LINK_TYPE::CONSUME_RESOURCE);
+        if ((int) consumption_links.size() > 0) {
+          // Find the strongest link!
+          auto *max_link = consumption_links[0];
+          for (auto *link : consumption_links) {
+            if (link->link_strength > max_link->link_strength) max_link = link;
+          }
+          // Feed resource to the strongest link.
+          //  * When an organism eats a resource:
+          // -- TODO --
+          // TODO: This bit is a little gross, but not sure if there's a better way to do it?
+          if (max_link->from->GetPhysicsBodyTypeID() == ORG_PHYSICS_BODY_TYPE_ID) {
+            SimpleOrganism *org = static_cast<Body<Circle>*>(max_link->from)->GetOwnerPtr<SimpleOrganism, ORG_PHYSICS_BODY_TYPE_ID>();
+            org->ConsumeResource(*resource);
+            delete resource;
+            cur_size--;
+            resources[cur_id] = resources[cur_size];
+            continue;
+          } // TODO: else { delete all links }
+        }
+        // Check resource aging
+        if (resource->GetAge() > max_resource_age) {
+          delete resource;
+          cur_size--;
+          resources[cur_id] = resources[cur_size];
+          continue;
+        }
+        // Add some noise to movement
+        resource->GetBody().IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(movement_noise));
+        cur_id++;
+      }
+      resources.resize(cur_size);
+      // Pump resources (at inflow rate) in as necessary to max capacity.
+      for (int i = 0; (i < resource_in_flow_rate) && (GetNumResources() < max_resource_count); i++) {
+        emp_assert((physics.GetWidth() > resource_radius * 2.0) && (physics.GetHeight() > resource_radius * 2.0));
+        Point<double> res_loc(random_ptr->GetDouble(resource_radius, physics.GetWidth() - resource_radius),
+                                   random_ptr->GetDouble(resource_radius, physics.GetHeight() - resource_radius));
+        Resource_t *new_resource = new Resource_t(Circle(res_loc, resource_radius));
+        new_resource->SetValue(resource_value);
+        // TODO: make the below values not magic numbers.
+        new_resource->SetColorID(180);
+        new_resource->GetBodyPtr()->SetMass(1);
+        AddResource(new_resource);
+      }
+      ////////////////////////////////////
+      // Manage the population.
+      ////////////////////////////////////
+      cur_size = GetSize();
+      cur_id = 0;
+      while (cur_id < cur_size) {
         Org_t *org = population[cur_id];
+        // Evaluate this organism.
+        org->Evaluate();
         // Check on this organism's body.
-        if (!org->CheckBody()) {
-          delete org; // TODO: fix shape's dangling pointer.
+        if (!org->HasBody()) {
+          delete org;
           cur_size--;
           population[cur_id] = population[cur_size];
           continue;
@@ -213,65 +280,6 @@ class PopulationManager_SimplePhysics {
       }
       // Add new organisms to the population.
       for (auto *new_organism : new_organisms) AddOrg(new_organism);
-      // Manage the resources.
-      cur_size = GetNumResources();
-      cur_id = 0;
-      while (cur_id < cur_size) {
-        Resource_t *resource = resources[cur_id];
-        // Remove resources with no body.
-        if (!resource->CheckBody()) {
-          delete resource; // TODO: fix shape's dangling pointer.
-          cur_size--;
-          resources[cur_id] = resources[cur_size];
-          continue;
-        }
-        // Resource has body, proceed.
-        // Handle resource consumption.
-        auto consumption_links = resource->GetBodyPtr()->GetLinksToByType(BODY_LINK_TYPE::CONSUME_RESOURCE);
-        if ((int) consumption_links.size() > 0) {
-          // Find the strongest link!
-          auto *max_link = consumption_links[0];
-          for (auto *link : consumption_links) {
-            if (link->link_strength > max_link->link_strength) max_link = link;
-          }
-          // Feed resource to the strongest link.
-          //  * When an organism eats a resource:
-          // -- TODO --
-          // TODO: This bit is a little gross, but not sure if there's a better way to do it?
-          if (max_link->from->GetPhysicsBodyTypeID() == ORG_PHYSICS_BODY_TYPE_ID) {
-            SimpleOrganism *org = static_cast<Body<Circle>*>(max_link->from)->GetOwnerPtr<SimpleOrganism, ORG_PHYSICS_BODY_TYPE_ID>();
-            org->ConsumeResource(*resource);
-            delete resource;
-            cur_size--;
-            resources[cur_id] = resources[cur_size];
-            continue;
-          } // TODO: else { delete all links }
-        }
-        // Check resource aging
-        if (resource->GetAge() > max_resource_age) {
-          delete resource; // TODO: fix shape's dangling pointer.
-          cur_size--;
-          resources[cur_id] = resources[cur_size];
-          continue;
-        }
-        resource->IncAge();
-        // Add some noise to movement
-        resource->GetBody().IncSpeed(Angle(random_ptr->GetDouble() * (2.0 * emp::PI)).GetPoint(movement_noise));
-        cur_id++;
-      }
-      resources.resize(cur_size);
-      // Pump resources (at inflow rate) in as necessary to max capacity.
-      for (int i = 0; (i < resource_in_flow_rate) && (GetNumResources() < max_resource_count); i++) {
-        emp_assert((physics.GetWidth() > resource_radius * 2.0) && (physics.GetHeight() > resource_radius * 2.0));
-        Point<double> res_loc(random_ptr->GetDouble(resource_radius, physics.GetWidth() - resource_radius),
-                                   random_ptr->GetDouble(resource_radius, physics.GetHeight() - resource_radius));
-        Resource_t *new_resource = new Resource_t(Circle(res_loc, resource_radius));
-        new_resource->SetValue(resource_value);
-        // TODO: make the below values not magic numbers.
-        new_resource->SetColorID(180);
-        new_resource->GetBodyPtr()->SetMass(1);
-        AddResource(new_resource);
-      }
     }
 };
 

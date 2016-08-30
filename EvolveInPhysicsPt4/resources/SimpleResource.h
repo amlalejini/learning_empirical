@@ -77,14 +77,13 @@ class SimpleResource {
 
     // TODO: how do we want to handle this? At the very least, this is not a great function name.
     //  Probably want to change over to Update() function or Execute() function.
-    bool CheckBody() {
-      // If something (physics) has destroyed the body,
-      // clean it up.
+    // DOC: Called once per population update.
+    void Evaluate() {
       if (body->GetDestroyFlag()) {
         delete body;
         DetachBody();
       }
-      return HasBody();
+      IncAge();
     }
 
     // operator overloads

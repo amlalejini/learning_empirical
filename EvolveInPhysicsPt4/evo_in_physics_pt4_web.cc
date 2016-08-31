@@ -17,8 +17,7 @@
 #include "./organisms/SimpleOrganism.h"
 #include "./resources/SimpleResource.h"
 #include "./population-managers/PopulationManager_SimplePhysics.h"
-// TODO: Merge my geometry package into Empirical.
-//       Having include conflicts because canvas utils includes a few geometry things.
+
 #include "web/web.h"
 #include "web/Document.h"
 #include "web/Animate.h"
@@ -46,6 +45,9 @@ namespace web = emp::web;
 
 // Default experiment settings.
 // TODO: try to switch this to using config system (use config system to generate HTML stuff as well)
+//  * Create a config object.
+//  * Write a function that, given a config object, generates the necessary HTML form.
+//  * Write a function that, when called, will automatically extract updated variable values from HTML form input.
 //  -- General Settings --
 const int DEFAULT_RANDOM_SEED = 1;
 const int DEFAULT_WORLD_WIDTH = 500;
@@ -64,6 +66,7 @@ const int DEFAULT_MAX_RESOURCE_AGE = 10000;
 const int DEFAULT_MAX_RESOURCE_COUNT = 100;
 const double DEFAULT_RESOURCE_RADIUS = 5.0;
 const double DEFAULT_RESOURCE_VALUE = 1.0;
+const int DEFAULT_RESOURCE_IN_FLOW = 10;
 //  -- Physics-specific --
 const double DEFAULT_SURFACE_FRICTION = 0.0025;
 const double DEFAULT_MOVEMENT_NOISE = 0.15;
@@ -109,6 +112,7 @@ class EvoInPhysicsInterface {
     int max_resource_count;
     double resource_radius;
     double resource_value;
+    int resource_in_flow;
     //  -- Physics-specific --
     double surface_friction;
     double movement_noise;
@@ -144,6 +148,7 @@ class EvoInPhysicsInterface {
       max_resource_count = DEFAULT_MAX_RESOURCE_COUNT;
       resource_radius = DEFAULT_RESOURCE_RADIUS;
       resource_value = DEFAULT_RESOURCE_VALUE;
+      resource_in_flow = DEFAULT_RESOURCE_IN_FLOW;
       //  -- Physics-specific --
       surface_friction = DEFAULT_SURFACE_FRICTION;
       movement_noise = DEFAULT_MOVEMENT_NOISE;
@@ -206,6 +211,7 @@ class EvoInPhysicsInterface {
       param_view << "Max Resource Count: " << web::Live([this]() { return max_resource_count; }) << "<br>";
       param_view << "Resource Radius: " << web::Live([this]() { return resource_radius; }) << "<br>";
       param_view << "Resource Value: " << web::Live([this]() { return resource_value; }) << "<br>";
+      param_view << "Resource In Flow: " << web::Live([this]() { return resource_in_flow; }) << "<br>";
       // -- Physics-Specific --
       param_view << "Surface Friction: " << web::Live([this]() { return surface_friction; }) << "<br>";
       param_view << "Movement Noise: " << web::Live([this]() { return movement_noise; }) << "<br>";
@@ -239,6 +245,7 @@ class EvoInPhysicsInterface {
       exp_config << GenerateParamNumberField("Max Resource Count", "max-resource-count", max_resource_count);
       exp_config << GenerateParamNumberField("Resource Radius", "resource-radius", resource_radius);
       exp_config << GenerateParamNumberField("Resource Value", "resource-value", resource_value);
+      exp_config << GenerateParamNumberField("Resource In Flow", "resource-in-flow", resource_in_flow);
       //  -- Physics-specific --
       exp_config << "<h3>Physics-Specific Settings</h3>";
       exp_config << GenerateParamNumberField("Surface Friction", "surface-friction", surface_friction);
@@ -300,7 +307,7 @@ class EvoInPhysicsInterface {
       // TODO: add resource_in_flow_rate parameter. Currently magic number.
       world->ConfigPop(world_width, world_height, surface_friction,
                        max_pop_size, point_mutation_rate, max_organism_radius,
-                       cost_of_repro, max_resource_age, max_resource_count, 10,
+                       cost_of_repro, max_resource_age, max_resource_count, resource_in_flow,
                        resource_radius, resource_value, movement_noise);
       // Run a reset
       DoReset();
@@ -436,6 +443,7 @@ class EvoInPhysicsInterface {
       max_resource_count = EM_ASM_INT_V({ return $("#max-resource-count-param").val(); });
       resource_radius = EM_ASM_DOUBLE_V({ return $("#resource-radius-param").val(); });
       resource_value = EM_ASM_DOUBLE_V({ return $("#resource-value-param").val(); });
+      resource_in_flow = EM_ASM_INT_V({ return $("#resource-in-flow-param").val(); });
       // -- Physics-Specific --
       surface_friction = EM_ASM_DOUBLE_V({ return $("#surface-friction-param").val(); });
       movement_noise = EM_ASM_DOUBLE_V({ return $("#movement-noise-param").val(); });

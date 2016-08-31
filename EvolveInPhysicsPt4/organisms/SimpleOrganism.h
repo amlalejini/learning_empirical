@@ -22,6 +22,7 @@ class SimpleOrganism {
     bool has_body;
     double energy;
     int resources_collected;
+    bool detach_on_birth;
 
   public:
     emp::BitVector genome;
@@ -34,9 +35,11 @@ class SimpleOrganism {
         has_body(false),
         energy(0.0),
         resources_collected(0.0),
+        detach_on_birth(detach_on_birth),
         genome(genome_length, false)
     {
       AttachBody(new Body_t(_p.GetCenter(), _p.GetRadius()));
+      body->RegisterOnLinkUpdateCallback([this](emp::BodyLink * link) { this->OnBodyLinkUpdate(link); });
       body->SetMaxPressure(membrane_strengh);
       body->SetMass(10); // TODO: make this not a magic number.
       SetColorID();
@@ -51,10 +54,12 @@ class SimpleOrganism {
          has_body(other.has_body),
          energy(other.GetEnergy()),
          resources_collected(other.GetResourcesCollected()),
+         detach_on_birth(other.GetDetachOnBirth()),
          genome(other.genome)
     {
       if (has_body) {
         AttachBody(new Body_t(other.GetConstBody().GetConstShape()));
+        body->RegisterOnLinkUpdateCallback([this](emp::BodyLink * link) { this->OnBodyLinkUpdate(link); });
         body->SetMaxPressure(membrane_strengh);
         body->SetMass(other.GetConstBody().GetMass());
         SetColorID();
@@ -72,7 +77,7 @@ class SimpleOrganism {
     double GetEnergy() const { return energy; }
     int GetResourcesCollected() const { return resources_collected; }
     double GetBirthTime() const { return birth_time; }
-    bool GetDetachOnBirth() const { emp_assert(has_body); /*return body->GetDetachOnRepro();*/return false; }
+    bool GetDetachOnBirth() const { return detach_on_birth; }
     double GetMembraneStrength() const { return membrane_strengh; }
     Body_t * GetBodyPtr() { emp_assert(has_body); return body; }
     Body_t & GetBody() { emp_assert(has_body); return *body; }
@@ -105,12 +110,19 @@ class SimpleOrganism {
       // Here is where an organism could handle a collision.
     }
 
+    void OnBodyLinkUpdate(emp::BodyLink * link) {
+      // What to do with reproduction links
+      if (link->type == emp::BODY_LINK_TYPE::REPRODUCTION) {
+        if (link->cur_dist >= link->target_dist) link->flag_for_removal = true;
+      }
+    }
+
     void ConsumeResource(const SimpleResource &resource) {
       energy += resource.GetValue();
       resources_collected++;
     }
 
-    void SetDetachOnBirth(bool detach) { emp_assert(has_body); /*body->SetDetachOnRepro(detach);*/ }
+    void SetDetachOnBirth(bool detach) { detach_on_birth = detach; }
     void SetMembraneStrength(double strength) {
       membrane_strengh = strength;
       if (has_body) body->SetMaxPressure(membrane_strengh);

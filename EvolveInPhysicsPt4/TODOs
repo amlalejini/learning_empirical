@@ -1,16 +1,12 @@
 
 TODOS:
-  * Clean up all canvas drawing tools. (should not refer to bodies, should refer only to shapes)
   * Write more canvas drawing tools. (add surface set drawing function)
+    * canvas_utils still assumes Surface<Circle>
   * Documentation on
     * geometry/*
     * physics/*
-  * Drawing utilities for OwnedShapes
   * Discuss the fate of BODY_LINK_TYPEs
   * Move surface friction out of the Surface class. Surface knows nothing about physics.
-  * DECIDE: CirclePhysics move to single surface? (probably)
-  * canvas_utils.h: Clean up drawing tools. Make sure we require Surface2D<Circle> if we're going to
-    draw circles.
   * Implement a BodyCollisionInfo struct:
     * bool resolved
     * dist, overlap, force, etc.

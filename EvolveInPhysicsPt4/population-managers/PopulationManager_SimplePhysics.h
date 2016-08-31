@@ -24,8 +24,6 @@
 //    - Resource placement
 //    - Population structure
 /////////////////////////
-// TODO: Speed up body removal when removing body owner.
-// TODO: make dummy default collision callback, allow users to register collision callbacks to be registered with physics.
 
 namespace emp {
 namespace evo {
@@ -37,7 +35,6 @@ class PopulationManager_SimplePhysics {
     using Org_t = ORG;                  // Just here for consistency
     using Resource_t = SimpleResource;
     using Physics_t = CirclePhysics2D<Resource_t, Org_t>;
-    // TODO
     Physics_t physics;
     emp::vector<Org_t*> population;
     emp::vector<Resource_t*> resources;
@@ -195,7 +192,7 @@ class PopulationManager_SimplePhysics {
         }
         // Resource has body, proceed.
         // Handle resource consumption.
-        // TODO: move this to SimpleResource::Evaluate?
+        // TODO: Is this the best place for this interaction?
         auto consumption_links = resource->GetBodyPtr()->GetLinksToByType(BODY_LINK_TYPE::CONSUME_RESOURCE);
         if ((int) consumption_links.size() > 0) {
           // Find the strongest link!
@@ -205,7 +202,6 @@ class PopulationManager_SimplePhysics {
           }
           // Feed resource to the strongest link.
           //  * When an organism eats a resource:
-          // -- TODO --
           // TODO: This bit is a little gross, but not sure if there's a better way to do it?
           if (max_link->from->GetPhysicsBodyTypeID() == ORG_PHYSICS_BODY_TYPE_ID) {
             SimpleOrganism *org = static_cast<Body<Circle>*>(max_link->from)->GetOwnerPtr<SimpleOrganism, ORG_PHYSICS_BODY_TYPE_ID>();
@@ -274,7 +270,7 @@ class PopulationManager_SimplePhysics {
         int new_size = ((int) population.size()) - (total_size - max_pop_size);
         emp::Shuffle<Org_t *>(*random_ptr, population, new_size);
         for (int i = new_size; i < (int) population.size(); i++) {
-          delete population[i]; // TODO: fix shape's dangling pointer.
+          delete population[i];
         }
         population.resize(new_size);
       }

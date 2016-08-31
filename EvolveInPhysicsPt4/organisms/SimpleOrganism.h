@@ -38,7 +38,7 @@ class SimpleOrganism {
         detach_on_birth(detach_on_birth),
         genome(genome_length, false)
     {
-      AttachBody(new Body_t(_p.GetCenter(), _p.GetRadius()));
+      AttachBody(new Body_t(_p));
       body->RegisterOnLinkUpdateCallback([this](emp::BodyLink * link) { this->OnBodyLinkUpdate(link); });
       body->SetMaxPressure(membrane_strengh);
       body->SetMass(10); // TODO: make this not a magic number.
